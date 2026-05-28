@@ -7,6 +7,7 @@ const {
   clientUpdate,
   clientDelete,
   clientSearch,
+  activateClientSubscription,
 } = require("../controllers/client.controller");
 const {
   validateRequestSchema,
@@ -846,6 +847,12 @@ router.put(
  *         "500":
  *           description: Internal server error
  */
+router.post(
+  "/:ClientID/activate-subscription",
+  pageAuthorisation(["SuperAdmin"]),
+  activateClientSubscription
+);
+
 router.delete(
   "/:ClientID",
   pageAuthorisation(["SuperAdmin"]),

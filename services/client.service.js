@@ -255,6 +255,18 @@ exports.clientUpdate = (data, callBack) => {
   });
 };
 
+exports.activateClientSubscription = (data, callBack) => {
+  db.query(
+    `UPDATE clients SET SubscriptionPlanStatus = 'Payment Success', SubscriptionPlanActivatedDate = ?, SubcriptionPlanEndDate = ? WHERE ClientID = ?`,
+    [data.activatedDate, data.endDate, data.ClientID],
+    (error, results) => {
+      if (error) return callBack(error.message);
+      if (results.affectedRows < 1) return callBack("Client not found", null, 404);
+      return callBack(null, "Subscription activated successfully");
+    }
+  );
+};
+
 exports.clientUpdateByUserID = (data, callBack) => {
   db.getConnection((error, connection) => {
     if (error) {

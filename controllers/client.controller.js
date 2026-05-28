@@ -7,6 +7,7 @@ const {
   clientUpdateByUserID,
   clientDelete,
   clientSearch,
+  activateClientSubscription,
 } = require("../services/client.service");
 const { hash } = require("bcrypt");
 const { generatePassword } = require("../helpers/randomNumbers");
@@ -271,6 +272,26 @@ exports.clientUpdate = (req, res) => {
     data.SubcriptionPlanEndDate = null;
     updateClientFunction(data, res);
   }
+};
+
+exports.activateClientSubscription = (req, res) => {
+  if (req.userData.RoleName !== "SuperAdmin") {
+    return res.status(403).send({ success: false, errors: { message: "The user does not have access" } });
+  }
+  const today = new Date();
+  const nextMonth = new Date(today);
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  const data = {
+    ClientID: req.params.ClientID,
+    activatedDate: today.toISOString().split("T")[0],
+    endDate: nextMonth.toISOString().split("T")[0],
+  };
+  activateClientSubscription(data, (error, results, status) => {
+    if (error) {
+      return res.status(status || 500).send({ success: false, errors: { message: error } });
+    }
+    return res.status(200).send({ success: true, results: { message: results } });
+  });
 };
 
 exports.clientDelete = (req, res) => {
