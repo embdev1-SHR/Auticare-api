@@ -6,6 +6,7 @@ const {
   clientCreate,
   clientUpdate,
   clientDelete,
+  clientPermanentDelete,
   clientSearch,
   activateClientSubscription,
 } = require("../controllers/client.controller");
@@ -864,6 +865,13 @@ router.delete(
   ],
   clientDelete
 );
+
+router.delete(
+  "/:ClientID/permanent",
+  pageAuthorisation(["SuperAdmin"]),
+  clientPermanentDelete
+);
+
 module.exports = router;
 
 /**

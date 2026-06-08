@@ -432,6 +432,41 @@ exports.clientDelete = ({ ClientID, Status }, callBack) => {
   });
 };
 
+exports.clientHardDelete = ({ ClientID }, callBack) => {
+  db.getConnection((error, connection) => {
+    if (error) return callBack(error.message);
+    connection.beginTransaction((error) => {
+      if (error) return callBack(error.message);
+      connection.query(
+        `UPDATE login_users INNER JOIN clients ON login_users.UserID = clients.UserID SET login_users.UserName = NULL, login_users.Password = NULL, login_users.Status = 0 WHERE clients.ClientID = ?`,
+        [ClientID],
+        (error) => {
+          if (error) return connection.rollback(() => { connection.release(); callBack(error.message); });
+          connection.query(
+            `UPDATE login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID SET login_users.UserName = NULL, login_users.Password = NULL, login_users.Status = 0 WHERE clients.ClientID = ?`,
+            [ClientID],
+            (error) => {
+              if (error) return connection.rollback(() => { connection.release(); callBack(error.message); });
+              connection.query(
+                `UPDATE login_users INNER JOIN therapists ON login_users.UserID = therapists.UserID INNER JOIN centers ON therapists.CenterID = centers.CenterID INNER JOIN clients ON clients.ClientID = centers.ClientID SET login_users.UserName = NULL, login_users.Password = NULL, login_users.Status = 0 WHERE clients.ClientID = ?`,
+                [ClientID],
+                (error) => {
+                  if (error) return connection.rollback(() => { connection.release(); callBack(error.message); });
+                  connection.commit((error) => {
+                    if (error) return connection.rollback(() => { connection.release(); callBack(error.message); });
+                    connection.release();
+                    return callBack(null, "Client deleted successfully");
+                  });
+                }
+              );
+            }
+          );
+        }
+      );
+    });
+  });
+};
+
 exports.getClientByClientId = (ClientID, callBack) => {
   db.query(
     `SELECT * FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID AND clients.ClientID = ? AND login_users.Status = 1 `,

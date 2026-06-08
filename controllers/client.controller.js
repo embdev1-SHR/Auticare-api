@@ -6,6 +6,7 @@ const {
   clientUpdate,
   clientUpdateByUserID,
   clientDelete,
+  clientHardDelete,
   clientSearch,
   activateClientSubscription,
 } = require("../services/client.service");
@@ -324,6 +325,24 @@ exports.clientDelete = (req, res) => {
     });
   }
 };
+
+exports.clientPermanentDelete = (req, res) => {
+  const data = {
+    ClientID: req.params.ClientID,
+    RoleName: req.userData.RoleName,
+  };
+  if (data.RoleName !== "SuperAdmin") {
+    return res.status(403).send({ success: false, errors: { message: "The user does not have access" } });
+  }
+  clientHardDelete(data, (error, results) => {
+    if (error) {
+      console.log(error);
+      return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    return res.status(200).send({ success: true, results: { message: results } });
+  });
+};
+
 function updateClientFunction(data, res) {
   if (data.RoleName == "SuperAdmin") {
     clientUpdate(data, (error, results, status) => {
