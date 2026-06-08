@@ -518,21 +518,20 @@ exports.DashboardAnalytics = async (req, res) => {
 };
 
 exports.ImageUpload = (req, res) => {
-  try {
-    const uploadSingle = upload.single("imageFile");
-    uploadSingle(req, res, async (error) => {
-      if (error) {
-        console.log(error.message);
-        return res.status(500).send({ success: false, errors: { message: error } });
-      }
+  const uploadSingle = upload.single("imageFile");
+  uploadSingle(req, res, (error) => {
+    if (error) {
+      console.error("Multer/S3 upload error:", error.message);
+      return res.status(500).send({ success: false, errors: { message: error.message } });
+    }
 
-      return res.status(200).send({
-        success: true,
-        results: { data: req.file.location },
-      });
+    if (!req.file) {
+      return res.status(400).send({ success: false, errors: { message: "No file received. Ensure the field name is 'imageFile' and the request is multipart/form-data." } });
+    }
+
+    return res.status(200).send({
+      success: true,
+      results: { data: req.file.location },
     });
-  } catch (error) {
-    console.warn(error);
-    return res.status(500).send({ success: false, errors: { message: error } });
-  }
+  });
 };
