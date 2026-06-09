@@ -331,9 +331,6 @@ exports.clientPermanentDelete = (req, res) => {
     ClientID: req.params.ClientID,
     RoleName: req.userData.RoleName,
   };
-  if (data.RoleName !== "SuperAdmin") {
-    return res.status(403).send({ success: false, errors: { message: "The user does not have access" } });
-  }
   clientHardDelete(data, (error, results) => {
     if (error) {
       console.log(error);
