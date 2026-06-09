@@ -4,7 +4,7 @@ const promiseDB = db.promise();
 
 exports.clientList = (callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, ( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID GROUP BY clients.ClientID`,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, ( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID WHERE login_users.Status = 1 GROUP BY clients.ClientID`,
     (error, results) => {
       if (error) {
         return callBack(error.message);
