@@ -94,7 +94,7 @@ exports.centerCreate = (data, callBack) => {
           return callBack(error.message);
         } else
           connection.query(
-            `INSERT INTO login_users ( EmailId, UserName, Phone, AddressLine1, AddressLine2, City, District, Pincode, State, Country, RoleId, Password, Create_By) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )`,
+            `INSERT INTO login_users ( EmailId, UserName, Phone, AddressLine1, AddressLine2, City, District, Pincode, State, Country, RoleId, Password, Create_By, Status) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )`,
             [
               data.EmailId,
               data.UserName,
@@ -109,6 +109,7 @@ exports.centerCreate = (data, callBack) => {
               3,
               data.Password,
               data.UserID,
+              1,
             ],
             (error, login_usersResult) => {
               if (error) {

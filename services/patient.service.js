@@ -571,7 +571,7 @@ exports.patientCreate = (data, callBack) => {
           return callBack(error.message);
         } else
           connection.query(
-            `INSERT INTO login_users ( EmailId, UserName, Phone, AddressLine1, AddressLine2, City, District, Pincode, State, Country, RoleId, Create_By ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )`,
+            `INSERT INTO login_users ( EmailId, UserName, Phone, AddressLine1, AddressLine2, City, District, Pincode, State, Country, RoleId, Create_By, Status ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )`,
             [
               data.ParentEmailID,
               data.ParentEmailID,
@@ -585,6 +585,7 @@ exports.patientCreate = (data, callBack) => {
               data.Country,
               5,
               data.UserID,
+              1,
             ],
             (error, login_usersResult) => {
               if (error) {
