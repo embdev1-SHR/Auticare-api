@@ -454,9 +454,11 @@ router.post(
       .trim(),
     body("ContactEmailId").isEmail().normalizeEmail(),
     body("IncorporationCertificateURL")
+      .optional({ checkFalsy: true })
       .isURL()
       .withMessage("Value must be a url"),
     body("RegistrationCertificateURL")
+      .optional({ checkFalsy: true })
       .isURL()
       .withMessage("Value must be a url"),
     body("SubscriptionPlanId")
@@ -738,9 +740,11 @@ router.put(
       .trim(),
     body("ContactEmailId").isEmail().normalizeEmail(),
     body("IncorporationCertificateURL")
+      .optional({ checkFalsy: true })
       .isURL()
       .withMessage("Value must be a url"),
     body("RegistrationCertificateURL")
+      .optional({ checkFalsy: true })
       .isURL()
       .withMessage("Value must be a url"),
     body("UpdateSubscriptionPlan").isBoolean().withMessage("Value must be boolean").trim(),
