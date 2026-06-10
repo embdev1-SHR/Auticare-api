@@ -1469,8 +1469,8 @@ exports.patientRegister = (data, callBack) => {
           return callBack(error.message);
         } else
           connection.query(
-            `INSERT INTO login_users ( EmailId, UserName, Phone, RoleId, Password, Create_By ) VALUES ( ?, ?, ?, ?, ?, ? )`,
-            [data.ParentEmailID, data.ParentEmailID, data.ParentPhone, 5, data.Password, 0],
+            `INSERT INTO login_users ( EmailId, UserName, Phone, RoleId, Password, Create_By, Status ) VALUES ( ?, ?, ?, ?, ?, ?, ? )`,
+            [data.ParentEmailID, data.ParentEmailID, data.ParentPhone, 5, data.Password, 0, 1],
             (error, login_usersResult) => {
               if (error) {
                 connection.rollback(() => {
