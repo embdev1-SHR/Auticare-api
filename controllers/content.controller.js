@@ -50,7 +50,7 @@ exports.contentList = (req, res) => {
     UserID: req.userData.UserID,
     RoleName: req.userData.RoleName,
   };
-  if (data.RoleName == "SuperAdmin") {
+  if (data.RoleName == "SuperAdmin" || data.RoleName == "Admin") {
     contentList((error, results) => {
       if (error) {
         console.log(error);
@@ -110,7 +110,7 @@ exports.contentMappingList = (req, res) => {
     RoleName: req.userData.RoleName,
   };
   let result = {};
-  if (data.RoleName == "SuperAdmin") {
+  if (data.RoleName == "SuperAdmin" || data.RoleName == "Admin") {
     contentSkillList((error, results) => {
       if (error) {
         console.log(error);
@@ -172,7 +172,7 @@ exports.contentMediaDatasList = (req, res) => {
     RoleName: req.userData.RoleName,
     ContentID: req.params.ContentID,
   };
-  if (data.RoleName == "SuperAdmin") {
+  if (data.RoleName == "SuperAdmin" || data.RoleName == "Admin") {
     contentMediaDatasList(data.ContentID, (error, results) => {
       if (error) {
         console.log(error);
@@ -232,7 +232,7 @@ exports.contentTutorialLinkList = (req, res) => {
     RoleName: req.userData.RoleName,
     ContentID: req.params.ContentID,
   };
-  if (data.RoleName == "SuperAdmin") {
+  if (data.RoleName == "SuperAdmin" || data.RoleName == "Admin") {
     contentTutorialLinkList(data.ContentID, (error, results) => {
       if (error) {
         console.log(error);
@@ -292,7 +292,7 @@ exports.contentDetails = (req, res) => {
     UserID: req.userData.UserID,
     RoleName: req.userData.RoleName,
   };
-  if (data.RoleName == "SuperAdmin") {
+  if (data.RoleName == "SuperAdmin" || data.RoleName == "Admin") {
     contentDetails(data.ContentID, (error, results) => {
       if (error) {
         console.log(error);
@@ -345,7 +345,7 @@ exports.contentSearch = (req, res) => {
     UserID: req.userData.UserID,
     RoleName: req.userData.RoleName,
   };
-  if (data.RoleName == "SuperAdmin") {
+  if (data.RoleName == "SuperAdmin" || data.RoleName == "Admin") {
     contentSearch(data, (error, results) => {
       if (error) {
         console.log(error);
@@ -397,9 +397,9 @@ exports.contentCreate = async (req, res) => {
     ...req.body,
     UserID: req.userData.UserID,
     RoleName: req.userData.RoleName,
-    ContentType: req.userData.RoleName == "SuperAdmin" ? "Default" : "Custom",
+    ContentType: ["SuperAdmin", "Admin"].includes(req.userData.RoleName) ? "Default" : "Custom",
   };
-  if (data.RoleName == "SuperAdmin") {
+  if (data.RoleName == "SuperAdmin" || data.RoleName == "Admin") {
     contentCreate(data, (error, results) => {
       if (error) {
         console.log(error);
@@ -498,7 +498,7 @@ exports.contentUpdate = (req, res) => {
     UserID: req.userData.UserID,
     RoleName: req.userData.RoleName,
   };
-  if (data.RoleName == "SuperAdmin") {
+  if (data.RoleName == "SuperAdmin" || data.RoleName == "Admin") {
     contentUpdate(data, (error, results, status) => {
       if (error) {
         console.log(error);
@@ -553,7 +553,7 @@ exports.contentMediaDataUpdate = (req, res) => {
     UserID: req.userData.UserID,
     RoleName: req.userData.RoleName,
   };
-  if (data.RoleName == "SuperAdmin") {
+  if (data.RoleName == "SuperAdmin" || data.RoleName == "Admin") {
     contentMediaDataUpdate(data, (error, results, status) => {
       if (error) {
         console.log(error);
@@ -593,7 +593,7 @@ exports.contentDelete = (req, res) => {
     UserID: req.userData.UserID,
     RoleName: req.userData.RoleName,
   };
-  if (data.RoleName == "SuperAdmin") {
+  if (data.RoleName == "SuperAdmin" || data.RoleName == "Admin") {
     contentDelete(data.ContentID, (error, results, status) => {
       if (error) {
         console.log(error);
@@ -653,7 +653,7 @@ exports.contentTutorialLinkDelete = (req, res) => {
     UserID: req.userData.UserID,
     RoleName: req.userData.RoleName,
   };
-  if (data.RoleName == "SuperAdmin") {
+  if (data.RoleName == "SuperAdmin" || data.RoleName == "Admin") {
     contentTutorialLinkDelete(data.TutorialLinkID, (error, results, status) => {
       if (error) {
         console.log(error);
