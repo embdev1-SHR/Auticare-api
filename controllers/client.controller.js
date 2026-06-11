@@ -195,10 +195,11 @@ exports.clientCreate = (req, res) => {
             data,
             "Your Auticare Client Account",
             welcomeMailHTML({ EmailId: data.EmailId, Password: password, AccountType: "client account", Name: data.ClientName })
-          );
-          return res.status(201).send({
-            success: true,
-            results: { message: results },
+          ).finally(() => {
+            res.status(201).send({
+              success: true,
+              results: { message: results },
+            });
           });
         });
       });

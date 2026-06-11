@@ -173,10 +173,11 @@ exports.centerCreate = (req, res) => {
             console.log(error);
             return res.status(500).send({ success: false, errors: { message: error } });
           }
-          sendMail(data, "Your Auticare Center Account", welcomeMailHTML({ EmailId: data.EmailId, Password: password, AccountType: "center account", Name: data.CenterName }));
-          return res.status(201).send({
-            success: true,
-            results: { message: results },
+          sendMail(data, "Your Auticare Center Account", welcomeMailHTML({ EmailId: data.EmailId, Password: password, AccountType: "center account", Name: data.CenterName })).finally(() => {
+            res.status(201).send({
+              success: true,
+              results: { message: results },
+            });
           });
         });
       });
@@ -200,10 +201,11 @@ exports.centerCreate = (req, res) => {
             console.log(error);
             return res.status(500).send({ success: false, errors: { message: error } });
           }
-          sendMail(data, "Your Auticare Center Account", welcomeMailHTML({ EmailId: data.EmailId, Password: password, AccountType: "center account", Name: data.CenterName }));
-          return res.status(201).send({
-            success: true,
-            results: { message: results },
+          sendMail(data, "Your Auticare Center Account", welcomeMailHTML({ EmailId: data.EmailId, Password: password, AccountType: "center account", Name: data.CenterName })).finally(() => {
+            res.status(201).send({
+              success: true,
+              results: { message: results },
+            });
           });
         });
       });

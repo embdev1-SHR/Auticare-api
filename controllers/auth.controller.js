@@ -364,14 +364,17 @@ exports.approvePendingCenter = (req, res) => {
     if (error) {
       return res.status(500).send({ success: false, errors: { message: error } });
     }
-    if (centerInfo && centerInfo.EmailId) {
-      sendMail(
-        { EmailId: centerInfo.EmailId },
-        "Your Auticare Center Account is Approved!",
-        centerApprovalHTML({ EmailId: centerInfo.EmailId, CenterName: centerInfo.CenterName })
-      );
-    }
-    return res.status(200).send({ success: true, results: { message: result } });
+    const emailPromise = (centerInfo && centerInfo.EmailId)
+      ? sendMail(
+          { EmailId: centerInfo.EmailId },
+          "Your Auticare Center Account is Approved!",
+          centerApprovalHTML({ EmailId: centerInfo.EmailId, CenterName: centerInfo.CenterName })
+        )
+      : Promise.resolve();
+
+    emailPromise.finally(() => {
+      res.status(200).send({ success: true, results: { message: result } });
+    });
   });
 };
 
@@ -381,14 +384,17 @@ exports.rejectPendingCenterRegistration = (req, res) => {
     if (error) {
       return res.status(500).send({ success: false, errors: { message: error } });
     }
-    if (centerInfo && centerInfo.EmailId) {
-      sendMail(
-        { EmailId: centerInfo.EmailId },
-        "Auticare Center Registration Update",
-        centerRejectionHTML({ CenterName: centerInfo.CenterName })
-      );
-    }
-    return res.status(200).send({ success: true, results: { message: result } });
+    const emailPromise = (centerInfo && centerInfo.EmailId)
+      ? sendMail(
+          { EmailId: centerInfo.EmailId },
+          "Auticare Center Registration Update",
+          centerRejectionHTML({ CenterName: centerInfo.CenterName })
+        )
+      : Promise.resolve();
+
+    emailPromise.finally(() => {
+      res.status(200).send({ success: true, results: { message: result } });
+    });
   });
 };
 
