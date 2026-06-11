@@ -191,7 +191,7 @@ exports.getPendingCenters = (callBack) => {
 
 exports.createPendingCenter = (data, callBack) => {
   db.query(
-    `INSERT INTO login_users ( EmailId, UserName, Phone, AddressLine1, AddressLine2, City, District, Pincode, State, Country, RoleId, Password, Status ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 3, ?, 0 )`,
+    `INSERT INTO login_users ( EmailId, UserName, Phone, AddressLine1, AddressLine2, City, District, Pincode, State, Country, RoleId, Password, Status, Create_By ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 3, ?, 0, 0 )`,
     [
       data.EmailId,
       data.CenterName || data.EmailId,
