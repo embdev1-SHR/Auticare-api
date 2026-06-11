@@ -162,6 +162,54 @@ exports.centerCreate = (data, callBack) => {
   });
 };
 
+exports.centerCreateFromPending = (data, callBack) => {
+  db.getConnection((error, connection) => {
+    if (error) return callBack(error.message);
+    connection.beginTransaction((error) => {
+      if (error) { connection.release(); return callBack(error.message); }
+      connection.query(
+        `UPDATE login_users SET Status = 1 WHERE UserID = ? AND Status = 0 AND RoleId = 3`,
+        [data.UserID],
+        (error, updateResult) => {
+          if (error) {
+            return connection.rollback(() => { connection.release(); return callBack(error.message); });
+          }
+          if (updateResult.affectedRows === 0) {
+            connection.release();
+            return callBack("Pending center not found or already approved");
+          }
+          connection.query(
+            `INSERT INTO centers ( UserID, ClientID, CenterName, CenterType, CenterHeadSalutation, CenterHeadName, CenterHeadDesignation, CenterHeadEmailId, CenterHeadPhone ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [data.UserID, data.ClientID, data.CenterName, data.CenterType, data.CenterHeadSalutation, data.CenterHeadName, data.CenterHeadDesignation, data.CenterHeadEmailId, data.CenterHeadPhone],
+            (error) => {
+              if (error) {
+                return connection.rollback(() => { connection.release(); return callBack(error.message); });
+              }
+              connection.commit((error) => {
+                if (error) return connection.rollback(() => { connection.release(); return callBack(error.message); });
+                connection.release();
+                return callBack(null, "Center approved successfully");
+              });
+            }
+          );
+        }
+      );
+    });
+  });
+};
+
+exports.rejectPendingCenter = (UserID, callBack) => {
+  db.query(
+    `DELETE FROM login_users WHERE UserID = ? AND Status = 0 AND RoleId = 3`,
+    [UserID],
+    (error, results) => {
+      if (error) return callBack(error.message);
+      if (results.affectedRows >= 1) return callBack(null, "Center registration rejected");
+      return callBack("Pending center not found");
+    }
+  );
+};
+
 exports.centerUpdate = (data, callBack) => {
   db.getConnection((error, connection) => {
     if (error) {

@@ -17,7 +17,11 @@ const {
   deleteRefreshToken,
   deleteAllRefreshToken,
   getUserByEmailIdNRoles,
+  checkEmailExists,
+  createPendingCenter,
+  getPendingCenters,
 } = require("../services/users.service");
+const { centerCreateFromPending, rejectPendingCenter } = require("../services/center.service");
 const { sendMail } = require("../helpers/email");
 
 exports.login = (req, res) => {
@@ -337,6 +341,84 @@ exports.resetPassword = (req, res) => {
       return res.status(200).send({
         success: true,
         results: { message: results },
+      });
+    });
+  });
+};
+
+exports.getPendingCentersList = (req, res) => {
+  getPendingCenters((error, results) => {
+    if (error) {
+      return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    return res.status(200).send({ success: true, results: { data: results } });
+  });
+};
+
+exports.approvePendingCenter = (req, res) => {
+  const data = {
+    UserID: req.body.UserID,
+    ClientID: req.body.ClientID,
+    CenterName: req.body.CenterName,
+    CenterType: req.body.CenterType,
+    CenterHeadSalutation: req.body.CenterHeadSalutation || "",
+    CenterHeadName: req.body.CenterHeadName,
+    CenterHeadDesignation: req.body.CenterHeadDesignation,
+    CenterHeadEmailId: req.body.CenterHeadEmailId,
+    CenterHeadPhone: req.body.CenterHeadPhone,
+  };
+  centerCreateFromPending(data, (error, result) => {
+    if (error) {
+      return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    return res.status(200).send({ success: true, results: { message: result } });
+  });
+};
+
+exports.rejectPendingCenterRegistration = (req, res) => {
+  const UserID = req.params.UserID;
+  rejectPendingCenter(UserID, (error, result) => {
+    if (error) {
+      return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    return res.status(200).send({ success: true, results: { message: result } });
+  });
+};
+
+exports.centerSignup = (req, res) => {
+  const data = {
+    EmailId: req.body.EmailId,
+    Phone: req.body.Phone,
+    Password: req.body.Password,
+    AddressLine1: req.body.AddressLine1 || "",
+    AddressLine2: req.body.AddressLine2 || "",
+    City: req.body.City || "",
+    District: req.body.District || "",
+    Pincode: req.body.Pincode || "",
+    State: req.body.State || "",
+    Country: req.body.Country || "",
+    CenterName: req.body.CenterName || "",
+  };
+
+  checkEmailExists(data.EmailId, (error, exists) => {
+    if (error) {
+      return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    if (exists) {
+      return res.status(400).send({ success: false, errors: { message: "Email already registered" } });
+    }
+    hash(data.Password, 10, (error, hashedPassword) => {
+      if (error) {
+        return res.status(500).send({ success: false, errors: { message: error.message } });
+      }
+      createPendingCenter({ ...data, Password: hashedPassword }, (error, result) => {
+        if (error) {
+          return res.status(500).send({ success: false, errors: { message: error } });
+        }
+        return res.status(200).send({
+          success: true,
+          results: { message: "Registration submitted. An admin will review and activate your account." },
+        });
       });
     });
   });

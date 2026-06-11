@@ -168,6 +168,51 @@ exports.deleteRefreshToken = (data, callBack) => {
   );
 };
 
+exports.checkEmailExists = (EmailId, callBack) => {
+  db.query(
+    `SELECT UserID FROM login_users WHERE EmailId = ?`,
+    [EmailId],
+    (error, results) => {
+      if (error) return callBack(error.message);
+      return callBack(null, results.length > 0);
+    }
+  );
+};
+
+exports.getPendingCenters = (callBack) => {
+  db.query(
+    `SELECT UserID, EmailId, UserName AS CenterName, Phone, AddressLine1, City, State, Country, Create_TS FROM login_users WHERE Status = 0 AND RoleId = 3 ORDER BY Create_TS DESC`,
+    (error, results) => {
+      if (error) return callBack(error.message);
+      return callBack(null, results);
+    }
+  );
+};
+
+exports.createPendingCenter = (data, callBack) => {
+  db.query(
+    `INSERT INTO login_users ( EmailId, UserName, Phone, AddressLine1, AddressLine2, City, District, Pincode, State, Country, RoleId, Password, Status ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 3, ?, 0 )`,
+    [
+      data.EmailId,
+      data.CenterName || data.EmailId,
+      data.Phone,
+      data.AddressLine1,
+      data.AddressLine2,
+      data.City,
+      data.District,
+      data.Pincode,
+      data.State,
+      data.Country,
+      data.Password,
+    ],
+    (error, results) => {
+      if (error) return callBack(error.message);
+      if (results.affectedRows >= 1) return callBack(null, "Pending center created");
+      return callBack("Failed to create registration");
+    }
+  );
+};
+
 exports.deleteAllRefreshToken = (UserID, callBack) => {
   db.query(
     `DELETE FROM refresh_tokens WHERE UserID = ?`,

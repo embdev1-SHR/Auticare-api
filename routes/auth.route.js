@@ -8,7 +8,12 @@ const {
   refreshToken,
   logout,
   logoutAll,
+  centerSignup,
+  getPendingCentersList,
+  approvePendingCenter,
+  rejectPendingCenterRegistration,
 } = require("../controllers/auth.controller");
+const { pageAuthorisation } = require("../middleware/authorization");
 const { verifyConfirmOtpToken } = require("../middleware/authentication");
 const {
   validateRequestSchema,
@@ -436,6 +441,23 @@ router.post(
   validateRequestSchema,
   verifyConfirmOtpToken,
   resetPassword
+);
+
+router.get("/pending-centers", pageAuthorisation(["SuperAdmin", "Admin", "ClientAdmin"]), getPendingCentersList);
+
+router.post("/approve-center", pageAuthorisation(["SuperAdmin", "Admin", "ClientAdmin"]), approvePendingCenter);
+
+router.delete("/reject-center/:UserID", pageAuthorisation(["SuperAdmin", "Admin", "ClientAdmin"]), rejectPendingCenterRegistration);
+
+router.post(
+  "/center-signup",
+  [
+    body("EmailId").isEmail().normalizeEmail(),
+    body("Password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters"),
+    body("CenterName").not().isEmpty().withMessage("Center name is required"),
+  ],
+  validateRequestSchema,
+  centerSignup
 );
 
 module.exports = router;
