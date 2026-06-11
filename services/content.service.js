@@ -291,57 +291,63 @@ exports.contentSearchByContentActivityNameNTherapistUserID = (data, callBack) =>
   );
 };
 
-exports.contentCreate = async (data, callBack) => {
-  let connection;
-  try {
-    connection = await dbAwait.awaitGetConnection();
-    await connection.awaitBeginTransaction();
-    const contentResult = await connection.awaitQuery(
-      `INSERT INTO contents ( ContentActivityName, ContentActivityDescription, ContentCategory, ContentType, Create_By ) VALUES ( ?, ?, ?, ?, ? )`,
-      [data.ContentActivityName, data.ContentActivityDescription, data.ContentCategory, data.ContentType, data.UserID]
-    );
-    const ContentID = contentResult?.insertId;
+exports.contentCreate = (data, callBack) => {
+  db.getConnection((error, connection) => {
+    if (error) return callBack(error.message);
+    connection.beginTransaction((error) => {
+      if (error) { connection.release(); return callBack(error.message); }
+      connection.query(
+        `INSERT INTO contents ( ContentActivityName, ContentActivityDescription, ContentCategory, ContentType, Create_By ) VALUES ( ?, ?, ?, ?, ? )`,
+        [data.ContentActivityName, data.ContentActivityDescription, data.ContentCategory, data.ContentType, data.UserID],
+        (error, contentResult) => {
+          if (error) {
+            return connection.rollback(() => { connection.release(); return callBack(error.message); });
+          }
+          const ContentID = contentResult.insertId;
+          const therapyIDs = data?.TherapyIDs || [];
+          const skillIDs = data?.SkillIDs || [];
 
-    const therapyIDList = [];
-    const therapyIDs = data?.TherapyIDs;
-    if (therapyIDs?.length) {
-      for (let index = 0; index < therapyIDs.length; index++) {
-        const element = therapyIDs[index];
-        therapyIDList.push([ContentID, element, data.UserID]);
-      }
-      await connection.awaitQuery(`INSERT INTO content_therapy_mappings ( ContentID, TherapyID, Create_By ) VALUES ?`, [
-        therapyIDList,
-      ]);
-    }
-    const skillIDList = [];
-    const skillIDs = data?.SkillIDs;
-    if (skillIDs?.length) {
-      for (let index = 0; index < skillIDs.length; index++) {
-        const element = skillIDs[index];
-        skillIDList.push([ContentID, element, data.UserID]);
-      }
-      await connection.awaitQuery(`INSERT INTO content_skill_mappings ( ContentID, SkillID, Create_By ) VALUES ?`, [
-        skillIDList,
-      ]);
-    }
-    await connection.awaitCommit();
-    await connection.release();
-    if (contentResult.affectedRows >= 1) {
-      return callBack(null, "Content created successfully");
-    } else {
-      return callBack("Failed to create content", null, 500);
-    }
-  } catch (error) {
-    console.warn(error);
-    if (connection) {
-      connection.rollback(() => {
-        connection.release();
-        return callBack(error.message);
-      });
-    } else {
-      return callBack(error.message);
-    }
-  }
+          const insertTherapies = (done) => {
+            if (!therapyIDs.length) return done(null);
+            const rows = therapyIDs.map((id) => [ContentID, id, data.UserID]);
+            connection.query(
+              `INSERT INTO content_therapy_mappings ( ContentID, TherapyID, Create_By ) VALUES ?`,
+              [rows],
+              (error) => done(error)
+            );
+          };
+
+          const insertSkills = (done) => {
+            if (!skillIDs.length) return done(null);
+            const rows = skillIDs.map((id) => [ContentID, id, data.UserID]);
+            connection.query(
+              `INSERT INTO content_skill_mappings ( ContentID, SkillID, Create_By ) VALUES ?`,
+              [rows],
+              (error) => done(error)
+            );
+          };
+
+          insertTherapies((error) => {
+            if (error) {
+              return connection.rollback(() => { connection.release(); return callBack(error.message); });
+            }
+            insertSkills((error) => {
+              if (error) {
+                return connection.rollback(() => { connection.release(); return callBack(error.message); });
+              }
+              connection.commit((error) => {
+                if (error) {
+                  return connection.rollback(() => { connection.release(); return callBack(error.message); });
+                }
+                connection.release();
+                return callBack(null, "Content created successfully");
+              });
+            });
+          });
+        }
+      );
+    });
+  });
 };
 
 exports.contentMediaDataCreate = (data, callBack) => {
@@ -445,47 +451,37 @@ exports.contentTutorialLinkCreate = (data, callBack) => {
   });
 };
 
-exports.contentUpdate = async (data, callBack) => {
-  let connection;
-  try {
-    connection = await dbAwait.awaitGetConnection();
-    await connection.awaitBeginTransaction();
-    const contentResult = await connection.awaitQuery(
-      `UPDATE contents SET ContentActivityName = ?, ContentActivityDescription = ?, ContentCategory = ?, FileUploadURL = ?, ActivityInstructionTitle = ?, ActivityInstructionDescription = ?, ContentDescription = ?, Status = ?, Update_By = ? WHERE ContentID = ? `,
-      [
-        data.ContentActivityName,
-        data.ContentActivityDescription,
-        data.ContentCategory,
-        data.FileUploadURL,
-        data.ActivityInstructionTitle,
-        data.ActivityInstructionDescription,
-        data.ContentDescription,
-        data.Status,
-        data.UserID,
-        data.ContentID,
-      ]
-    );
-    const ContentID = data.ContentID;
-    await TherapyIDUpdates(data, ContentID, connection);
-    await SkillIDUpdates(data, ContentID, connection);
-    await connection.awaitCommit();
-    await connection.release();
-    if (contentResult.affectedRows >= 1) {
-      return callBack(null, "Therapy updated successfully");
-    } else {
-      return callBack("Therapy not found", null, 404);
-    }
-  } catch (error) {
-    console.warn(error);
-    if (connection) {
-      connection.rollback(() => {
-        connection.release();
-        return callBack(error.message);
-      });
-    } else {
-      return callBack(error.message);
-    }
-  }
+exports.contentUpdate = (data, callBack) => {
+  db.getConnection((error, connection) => {
+    if (error) return callBack(error.message);
+    connection.beginTransaction((error) => {
+      if (error) { connection.release(); return callBack(error.message); }
+      connection.query(
+        `UPDATE contents SET ContentActivityName = ?, ContentActivityDescription = ?, ContentCategory = ?, FileUploadURL = ?, ActivityInstructionTitle = ?, ActivityInstructionDescription = ?, ContentDescription = ?, Status = ?, Update_By = ? WHERE ContentID = ? `,
+        [data.ContentActivityName, data.ContentActivityDescription, data.ContentCategory, data.FileUploadURL, data.ActivityInstructionTitle, data.ActivityInstructionDescription, data.ContentDescription, data.Status, data.UserID, data.ContentID],
+        (error, contentResult) => {
+          if (error) {
+            return connection.rollback(() => { connection.release(); return callBack(error.message); });
+          }
+          therapyIDUpdates(data, data.ContentID, connection, (error) => {
+            if (error) return connection.rollback(() => { connection.release(); return callBack(error); });
+            skillIDUpdates(data, data.ContentID, connection, (error) => {
+              if (error) return connection.rollback(() => { connection.release(); return callBack(error); });
+              connection.commit((error) => {
+                if (error) return connection.rollback(() => { connection.release(); return callBack(error.message); });
+                connection.release();
+                if (contentResult.affectedRows >= 1) {
+                  return callBack(null, "Content updated successfully");
+                } else {
+                  return callBack("Content not found", null, 404);
+                }
+              });
+            });
+          });
+        }
+      );
+    });
+  });
 };
 
 exports.contentMediaDataUpdate = (data, callBack) => {
@@ -504,48 +500,37 @@ exports.contentMediaDataUpdate = (data, callBack) => {
   );
 };
 
-exports.contentUpdateByCreate_By = async (data, callBack) => {
-  let connection;
-  try {
-    connection = await dbAwait.awaitGetConnection();
-    await connection.awaitBeginTransaction();
-    const contentResult = await connection.awaitQuery(
-      `UPDATE contents SET ContentActivityName = ?, ContentActivityDescription = ?, ContentCategory = ?, FileUploadURL = ?, ActivityInstructionTitle = ?, ActivityInstructionDescription = ?, ContentDescription = ?, Status = ?, Update_By = ? WHERE ContentID = ? AND Create_By = ? `,
-      [
-        data.ContentActivityName,
-        data.ContentActivityDescription,
-        data.ContentCategory,
-        data.FileUploadURL,
-        data.ActivityInstructionTitle,
-        data.ActivityInstructionDescription,
-        data.ContentDescription,
-        data.Status,
-        data.UserID,
-        data.ContentID,
-        data.UserID,
-      ]
-    );
-    const ContentID = data.ContentID;
-    await TherapyIDUpdates(data, ContentID, connection);
-    await SkillIDUpdates(data, ContentID, connection);
-    await connection.awaitCommit();
-    await connection.release();
-    if (contentResult.affectedRows >= 1) {
-      return callBack(null, "Therapy updated successfully");
-    } else {
-      return callBack("Therapy not found", null, 404);
-    }
-  } catch (error) {
-    console.warn(error);
-    if (connection) {
-      connection.rollback(() => {
-        connection.release();
-        return callBack(error.message);
-      });
-    } else {
-      return callBack(error.message);
-    }
-  }
+exports.contentUpdateByCreate_By = (data, callBack) => {
+  db.getConnection((error, connection) => {
+    if (error) return callBack(error.message);
+    connection.beginTransaction((error) => {
+      if (error) { connection.release(); return callBack(error.message); }
+      connection.query(
+        `UPDATE contents SET ContentActivityName = ?, ContentActivityDescription = ?, ContentCategory = ?, FileUploadURL = ?, ActivityInstructionTitle = ?, ActivityInstructionDescription = ?, ContentDescription = ?, Status = ?, Update_By = ? WHERE ContentID = ? AND Create_By = ? `,
+        [data.ContentActivityName, data.ContentActivityDescription, data.ContentCategory, data.FileUploadURL, data.ActivityInstructionTitle, data.ActivityInstructionDescription, data.ContentDescription, data.Status, data.UserID, data.ContentID, data.UserID],
+        (error, contentResult) => {
+          if (error) {
+            return connection.rollback(() => { connection.release(); return callBack(error.message); });
+          }
+          therapyIDUpdates(data, data.ContentID, connection, (error) => {
+            if (error) return connection.rollback(() => { connection.release(); return callBack(error); });
+            skillIDUpdates(data, data.ContentID, connection, (error) => {
+              if (error) return connection.rollback(() => { connection.release(); return callBack(error); });
+              connection.commit((error) => {
+                if (error) return connection.rollback(() => { connection.release(); return callBack(error.message); });
+                connection.release();
+                if (contentResult.affectedRows >= 1) {
+                  return callBack(null, "Content updated successfully");
+                } else {
+                  return callBack("Content not found", null, 404);
+                }
+              });
+            });
+          });
+        }
+      );
+    });
+  });
 };
 
 exports.contentMediaDataUpdateByCreate_By = (data, callBack) => {
@@ -880,46 +865,46 @@ exports.getContentByCreate_ByNContentId = (data, callBack) => {
   );
 };
 
-async function TherapyIDUpdates(data, ContentID, connection) {
-  const therapyIDList = [];
-  const therapyIDs = data?.AddTherapyIDs;
-  if (therapyIDs?.length) {
-    for (let index = 0; index < therapyIDs.length; index++) {
-      const element = therapyIDs[index];
-      therapyIDList.push([ContentID, element, data.UserID]);
-    }
-    await connection.awaitQuery(`INSERT INTO content_therapy_mappings ( ContentID, TherapyID, Create_By ) VALUES ?`, [
-      therapyIDList,
-    ]);
-  }
-  if (data?.RemoveTherapyIDs?.length) {
-    await connection.awaitQuery(
-      `DELETE FROM content_therapy_mappings WHERE (TherapyID, ContentID) IN (${arrayToNumberPair(
-        data?.RemoveTherapyIDs,
-        ContentID
-      )})`
+function therapyIDUpdates(data, ContentID, connection, done) {
+  const addIDs = data?.AddTherapyIDs || [];
+  const removeIDs = data?.RemoveTherapyIDs || [];
+  const insertStep = (next) => {
+    if (!addIDs.length) return next(null);
+    const rows = addIDs.map((id) => [ContentID, id, data.UserID]);
+    connection.query(
+      `INSERT INTO content_therapy_mappings ( ContentID, TherapyID, Create_By ) VALUES ?`,
+      [rows],
+      (error) => next(error ? error.message : null)
     );
-  }
+  };
+  const deleteStep = (next) => {
+    if (!removeIDs.length) return next(null);
+    connection.query(
+      `DELETE FROM content_therapy_mappings WHERE (TherapyID, ContentID) IN (${arrayToNumberPair(removeIDs, ContentID)})`,
+      (error) => next(error ? error.message : null)
+    );
+  };
+  insertStep((error) => { if (error) return done(error); deleteStep(done); });
 }
 
-async function SkillIDUpdates(data, ContentID, connection) {
-  const skillIDList = [];
-  const skillIDs = data?.AddSkillIDs;
-  if (skillIDs?.length) {
-    for (let index = 0; index < skillIDs.length; index++) {
-      const element = skillIDs[index];
-      skillIDList.push([ContentID, element, data.UserID]);
-    }
-    await connection.awaitQuery(`INSERT INTO content_skill_mappings ( ContentID, SkillID, Create_By ) VALUES ?`, [
-      skillIDList,
-    ]);
-  }
-  if (data?.RemoveSkillIDs?.length) {
-    await connection.awaitQuery(
-      `DELETE FROM content_skill_mappings WHERE (SkillID, ContentID) IN (${arrayToNumberPair(
-        data?.RemoveSkillIDs,
-        ContentID
-      )})`
+function skillIDUpdates(data, ContentID, connection, done) {
+  const addIDs = data?.AddSkillIDs || [];
+  const removeIDs = data?.RemoveSkillIDs || [];
+  const insertStep = (next) => {
+    if (!addIDs.length) return next(null);
+    const rows = addIDs.map((id) => [ContentID, id, data.UserID]);
+    connection.query(
+      `INSERT INTO content_skill_mappings ( ContentID, SkillID, Create_By ) VALUES ?`,
+      [rows],
+      (error) => next(error ? error.message : null)
     );
-  }
+  };
+  const deleteStep = (next) => {
+    if (!removeIDs.length) return next(null);
+    connection.query(
+      `DELETE FROM content_skill_mappings WHERE (SkillID, ContentID) IN (${arrayToNumberPair(removeIDs, ContentID)})`,
+      (error) => next(error ? error.message : null)
+    );
+  };
+  insertStep((error) => { if (error) return done(error); deleteStep(done); });
 }
