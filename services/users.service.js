@@ -195,11 +195,27 @@ exports.getPendingCenters = (callBack) => {
 };
 
 exports.createPendingCenter = (data, callBack) => {
+  const centerName = data.CenterName || data.EmailId;
   db.query(
-    `INSERT INTO login_users ( EmailId, UserName, Phone, AddressLine1, AddressLine2, City, District, Pincode, State, Country, RoleId, Password, Status, Create_By ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 3, ?, 0, 0 )`,
+    `INSERT INTO login_users (EmailId, UserName, Phone, AddressLine1, AddressLine2, City, District, Pincode, State, Country, RoleId, Password, Status, Create_By)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 3, ?, 0, 0)
+     ON DUPLICATE KEY UPDATE
+       UserName = VALUES(UserName),
+       Phone = VALUES(Phone),
+       AddressLine1 = VALUES(AddressLine1),
+       AddressLine2 = VALUES(AddressLine2),
+       City = VALUES(City),
+       District = VALUES(District),
+       Pincode = VALUES(Pincode),
+       State = VALUES(State),
+       Country = VALUES(Country),
+       RoleId = 3,
+       Password = VALUES(Password),
+       Status = 0,
+       Update_By = 0`,
     [
       data.EmailId,
-      data.CenterName || data.EmailId,
+      centerName,
       data.Phone,
       data.AddressLine1,
       data.AddressLine2,
