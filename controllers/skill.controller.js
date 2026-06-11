@@ -367,33 +367,22 @@ exports.skillCreate = async (req, res) => {
         results: { message: results },
       });
     });
+  } else if (["ClientAdmin", "Center", "Therapist"].includes(data.RoleName)) {
+    skillCreate(data, (error, results) => {
+      if (error) {
+        console.log(error);
+        return res.status(500).send({ success: false, errors: { message: error } });
+      }
+      return res.status(201).send({
+        success: true,
+        results: { message: results },
+      });
+    });
   } else {
-    const subscriptionResults = (await subscriptionPlanDetailsByUserID(data.UserID))[0];
-    let skillCount = 0;
-    if (data.RoleName == "ClientAdmin") {
-      skillCount = (await skillCountByClientUserID(data.UserID))[0].SkillCount;
-    } else if (data.RoleName == "Center") {
-      skillCount = (await skillCountByCenterUserID(data.UserID))[0].SkillCount;
-    } else if (data.RoleName == "Therapist") {
-      skillCount = (await skillCountByTherapistUserID(data.UserID))[0].SkillCount;
-    }
-    if (skillCount >= subscriptionResults.NumberofCustomSkills) {
-      return res.status(400).send({
-        success: false,
-        errors: { message: "The number of skills allowed in the subscription plan has already been created" },
-      });
-    } else {
-      skillCreate(data, (error, results) => {
-        if (error) {
-          console.log(error);
-          return res.status(500).send({ success: false, errors: { message: error } });
-        }
-        return res.status(201).send({
-          success: true,
-          results: { message: results },
-        });
-      });
-    }
+    return res.status(403).send({
+      success: false,
+      errors: { message: "The user does not have access" },
+    });
   }
 };
 
