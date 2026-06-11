@@ -292,8 +292,9 @@ exports.contentSearchByContentActivityNameNTherapistUserID = (data, callBack) =>
 };
 
 exports.contentCreate = async (data, callBack) => {
-  const connection = await dbAwait.awaitGetConnection();
+  let connection;
   try {
+    connection = await dbAwait.awaitGetConnection();
     await connection.awaitBeginTransaction();
     const contentResult = await connection.awaitQuery(
       `INSERT INTO contents ( ContentActivityName, ContentActivityDescription, ContentCategory, ContentType, Create_By ) VALUES ( ?, ?, ?, ?, ? )`,
@@ -332,10 +333,14 @@ exports.contentCreate = async (data, callBack) => {
     }
   } catch (error) {
     console.warn(error);
-    connection.rollback(async () => {
-      await connection.release();
+    if (connection) {
+      connection.rollback(() => {
+        connection.release();
+        return callBack(error.message);
+      });
+    } else {
       return callBack(error.message);
-    });
+    }
   }
 };
 
@@ -441,8 +446,9 @@ exports.contentTutorialLinkCreate = (data, callBack) => {
 };
 
 exports.contentUpdate = async (data, callBack) => {
-  const connection = await dbAwait.awaitGetConnection();
+  let connection;
   try {
+    connection = await dbAwait.awaitGetConnection();
     await connection.awaitBeginTransaction();
     const contentResult = await connection.awaitQuery(
       `UPDATE contents SET ContentActivityName = ?, ContentActivityDescription = ?, ContentCategory = ?, FileUploadURL = ?, ActivityInstructionTitle = ?, ActivityInstructionDescription = ?, ContentDescription = ?, Status = ?, Update_By = ? WHERE ContentID = ? `,
@@ -471,10 +477,14 @@ exports.contentUpdate = async (data, callBack) => {
     }
   } catch (error) {
     console.warn(error);
-    connection.rollback(async () => {
-      await connection.release();
+    if (connection) {
+      connection.rollback(() => {
+        connection.release();
+        return callBack(error.message);
+      });
+    } else {
       return callBack(error.message);
-    });
+    }
   }
 };
 
@@ -495,8 +505,9 @@ exports.contentMediaDataUpdate = (data, callBack) => {
 };
 
 exports.contentUpdateByCreate_By = async (data, callBack) => {
-  const connection = await dbAwait.awaitGetConnection();
+  let connection;
   try {
+    connection = await dbAwait.awaitGetConnection();
     await connection.awaitBeginTransaction();
     const contentResult = await connection.awaitQuery(
       `UPDATE contents SET ContentActivityName = ?, ContentActivityDescription = ?, ContentCategory = ?, FileUploadURL = ?, ActivityInstructionTitle = ?, ActivityInstructionDescription = ?, ContentDescription = ?, Status = ?, Update_By = ? WHERE ContentID = ? AND Create_By = ? `,
@@ -526,10 +537,14 @@ exports.contentUpdateByCreate_By = async (data, callBack) => {
     }
   } catch (error) {
     console.warn(error);
-    connection.rollback(async () => {
-      await connection.release();
+    if (connection) {
+      connection.rollback(() => {
+        connection.release();
+        return callBack(error.message);
+      });
+    } else {
       return callBack(error.message);
-    });
+    }
   }
 };
 
