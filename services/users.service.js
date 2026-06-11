@@ -170,7 +170,12 @@ exports.deleteRefreshToken = (data, callBack) => {
 
 exports.checkEmailExists = (EmailId, callBack) => {
   db.query(
-    `SELECT UserID FROM login_users WHERE EmailId = ?`,
+    `SELECT UserID FROM login_users
+     WHERE EmailId = ?
+     AND (
+       Status = 1
+       OR (Status = 0 AND RoleId = 3 AND UserID NOT IN (SELECT UserID FROM centers))
+     )`,
     [EmailId],
     (error, results) => {
       if (error) return callBack(error.message);
