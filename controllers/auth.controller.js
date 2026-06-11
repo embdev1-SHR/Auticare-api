@@ -1,6 +1,7 @@
 const { hash, compare } = require("bcrypt");
 const { verify } = require("jsonwebtoken");
-const { forgotPasswordHTML } = require("../helpers/consts");
+const { forgotPasswordHTML, centerApprovalHTML, centerRejectionHTML } = require("../helpers/consts");
+const { sendMail } = require("../helpers/email");
 const { generateOTP } = require("../helpers/randomNumbers");
 const {
   signAccessToken,
@@ -22,7 +23,6 @@ const {
   getPendingCenters,
 } = require("../services/users.service");
 const { centerCreateFromPending, rejectPendingCenter } = require("../services/center.service");
-const { sendMail } = require("../helpers/email");
 
 exports.login = (req, res) => {
   const data = {
@@ -359,17 +359,17 @@ exports.approvePendingCenter = (req, res) => {
   const data = {
     UserID: req.body.UserID,
     ClientID: req.body.ClientID,
-    CenterName: req.body.CenterName,
-    CenterType: req.body.CenterType,
-    CenterHeadSalutation: req.body.CenterHeadSalutation || "",
-    CenterHeadName: req.body.CenterHeadName,
-    CenterHeadDesignation: req.body.CenterHeadDesignation,
-    CenterHeadEmailId: req.body.CenterHeadEmailId,
-    CenterHeadPhone: req.body.CenterHeadPhone,
   };
-  centerCreateFromPending(data, (error, result) => {
+  centerCreateFromPending(data, (error, result, centerInfo) => {
     if (error) {
       return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    if (centerInfo && centerInfo.EmailId) {
+      sendMail(
+        { EmailId: centerInfo.EmailId },
+        "Your Auticare Center Account is Approved!",
+        centerApprovalHTML({ EmailId: centerInfo.EmailId, CenterName: centerInfo.CenterName })
+      );
     }
     return res.status(200).send({ success: true, results: { message: result } });
   });
@@ -377,9 +377,16 @@ exports.approvePendingCenter = (req, res) => {
 
 exports.rejectPendingCenterRegistration = (req, res) => {
   const UserID = req.params.UserID;
-  rejectPendingCenter(UserID, (error, result) => {
+  rejectPendingCenter(UserID, (error, result, centerInfo) => {
     if (error) {
       return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    if (centerInfo && centerInfo.EmailId) {
+      sendMail(
+        { EmailId: centerInfo.EmailId },
+        "Auticare Center Registration Update",
+        centerRejectionHTML({ CenterName: centerInfo.CenterName })
+      );
     }
     return res.status(200).send({ success: true, results: { message: result } });
   });

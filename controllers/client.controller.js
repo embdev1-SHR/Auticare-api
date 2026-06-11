@@ -193,8 +193,8 @@ exports.clientCreate = (req, res) => {
           }
           sendMail(
             data,
-            "Login Credentials",
-            welcomeMailHTML({ EmailId: data.EmailId, Password: password })
+            "Your Auticare Client Account",
+            welcomeMailHTML({ EmailId: data.EmailId, Password: password, AccountType: "client account", Name: data.ClientName })
           );
           return res.status(201).send({
             success: true,

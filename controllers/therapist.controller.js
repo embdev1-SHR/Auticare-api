@@ -383,7 +383,7 @@ exports.therapistCreate = async (req, res) => {
                       console.log(error);
                       return res.status(500).send({ success: false, errors: { message: error } });
                     }
-                    sendMail(data, "Login Credentials", welcomeMailHTML({ EmailId: data.EmailId, Password: password }));
+                    sendMail(data, "Your Auticare Therapist Account", welcomeMailHTML({ EmailId: data.EmailId, Password: password, AccountType: "therapist account", Name: data.Name }));
                     return res.status(201).send({
                       success: true,
                       results: { message: results },
@@ -467,7 +467,7 @@ exports.therapistCreate = async (req, res) => {
                       console.log(error);
                       return res.status(500).send({ success: false, errors: { message: error } });
                     }
-                    sendMail(data, "Login Credentials", welcomeMailHTML({ EmailId: data.EmailId, Password: password }));
+                    sendMail(data, "Your Auticare Therapist Account", welcomeMailHTML({ EmailId: data.EmailId, Password: password, AccountType: "therapist account", Name: data.Name }));
                     return res.status(201).send({
                       success: true,
                       results: { message: results },
@@ -534,7 +534,7 @@ exports.therapistCreate = async (req, res) => {
                 console.log(error);
                 return res.status(500).send({ success: false, errors: { message: error } });
               }
-              sendMail(data, "Login Credentials", welcomeMailHTML({ EmailId: data.EmailId, Password: password }));
+              sendMail(data, "Your Auticare Therapist Account", welcomeMailHTML({ EmailId: data.EmailId, Password: password, AccountType: "therapist account", Name: data.Name }));
               return res.status(201).send({
                 success: true,
                 results: { message: results },

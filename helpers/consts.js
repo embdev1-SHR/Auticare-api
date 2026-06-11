@@ -454,11 +454,95 @@ exports.forgotPasswordHTML = (data) => {
   </html>`;
 };
 
+const BASE_STYLE = `
+  <style>
+    body{margin:0;padding:0;background:#f2f3f8;font-family:'Open Sans',Arial,sans-serif;}
+    .wrap{max-width:600px;margin:40px auto;background:#fff;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.08);overflow:hidden;}
+    .header{background:#30e3ca;padding:28px 40px;text-align:center;}
+    .header h1{margin:0;color:#fff;font-size:26px;font-weight:700;letter-spacing:.5px;}
+    .body{padding:36px 40px;}
+    .body h2{color:#1e1e2d;font-size:20px;margin:0 0 8px;}
+    .body p{color:#555;font-size:15px;line-height:1.7;margin:0 0 16px;}
+    .cred-box{background:#f7f8fa;border:1px solid #e2e6ea;border-radius:6px;padding:16px 20px;margin:20px 0;}
+    .cred-box p{margin:4px 0;font-size:14px;color:#333;}
+    .cred-box span{font-weight:700;color:#1e1e2d;}
+    .btn{display:inline-block;margin-top:24px;padding:12px 32px;background:#30e3ca;color:#fff;border-radius:50px;font-size:15px;font-weight:600;text-decoration:none;}
+    .footer{background:#f7f8fa;border-top:1px solid #eee;padding:16px 40px;text-align:center;color:#aaa;font-size:12px;}
+  </style>
+`;
+
 exports.welcomeMailHTML = (data) => {
+  const loginUrl = (process.env.FRONTEND_URL || "https://dashboard.myauticare.com") + "/login";
+  const accountType = data.AccountType || "account";
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Welcome to Auticare</title>${BASE_STYLE}</head>
+  <body>
+    <div class="wrap">
+      <div class="header"><h1>Welcome to Auticare</h1></div>
+      <div class="body">
+        <h2>Your ${accountType} is ready!</h2>
+        <p>Hi${data.Name ? " " + data.Name : ""},</p>
+        <p>Your Auticare ${accountType} has been created. Here are your login credentials:</p>
+        <div class="cred-box">
+          <p>Email / Username: <span>${data.EmailId}</span></p>
+          <p>Password: <span>${data.Password}</span></p>
+        </div>
+        <p>Please log in and change your password after first sign-in.</p>
+        <a href="${loginUrl}" class="btn">Log In to Auticare</a>
+      </div>
+      <div class="footer">&copy; ${new Date().getFullYear()} Auticare &mdash; <a href="https://www.myauticare.com" style="color:#30e3ca;">www.myauticare.com</a></div>
+    </div>
+  </body></html>`;
+};
+
+exports.centerApprovalHTML = (data) => {
+  const loginUrl = (process.env.FRONTEND_URL || "https://dashboard.myauticare.com") + "/login";
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Center Account Approved</title>${BASE_STYLE}</head>
+  <body>
+    <div class="wrap">
+      <div class="header"><h1>Account Approved!</h1></div>
+      <div class="body">
+        <h2>Your center registration has been approved</h2>
+        <p>Hi${data.CenterName ? " " + data.CenterName : ""},</p>
+        <p>Great news! Your center registration on Auticare has been reviewed and <strong>approved</strong>. Your account is now active.</p>
+        <div class="cred-box">
+          <p>Email: <span>${data.EmailId}</span></p>
+          <p>Center: <span>${data.CenterName || "—"}</span></p>
+        </div>
+        <p>Use the email and password you registered with to log in.</p>
+        <a href="${loginUrl}" class="btn">Log In to Auticare</a>
+      </div>
+      <div class="footer">&copy; ${new Date().getFullYear()} Auticare &mdash; <a href="https://www.myauticare.com" style="color:#30e3ca;">www.myauticare.com</a></div>
+    </div>
+  </body></html>`;
+};
+
+exports.centerRejectionHTML = (data) => {
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Center Registration Update</title>${BASE_STYLE}</head>
+  <body>
+    <div class="wrap">
+      <div class="header" style="background:#e74c3c;"><h1>Registration Update</h1></div>
+      <div class="body">
+        <h2>Your registration could not be approved</h2>
+        <p>Hi${data.CenterName ? " " + data.CenterName : ""},</p>
+        <p>Thank you for registering your center on Auticare. After review, we were unable to approve your registration at this time.</p>
+        <p>If you believe this is a mistake or need clarification, please contact our support team at <a href="mailto:support@myauticare.com">support@myauticare.com</a>.</p>
+      </div>
+      <div class="footer">&copy; ${new Date().getFullYear()} Auticare &mdash; <a href="https://www.myauticare.com" style="color:#30e3ca;">www.myauticare.com</a></div>
+    </div>
+  </body></html>`;
+};
+
+exports._welcomeMailHTML_UNUSED = (data) => {
   return `<!DOCTYPE html>
   <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml"
     xmlns:o="urn:schemas-microsoft-com:office:office">
-  
+
   <head>
     <meta charset="utf-8"> <!-- utf-8 works for most cases -->
     <meta name="viewport" content="width=device-width"> <!-- Forcing initial-scale shouldn't be necessary -->
