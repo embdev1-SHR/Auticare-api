@@ -14,7 +14,7 @@ const {
   rejectPendingCenterRegistration,
 } = require("../controllers/auth.controller");
 const { pageAuthorisation } = require("../middleware/authorization");
-const { verifyConfirmOtpToken } = require("../middleware/authentication");
+const { verifyConfirmOtpToken, verifyAccessToken } = require("../middleware/authentication");
 const {
   validateRequestSchema,
 } = require("../middleware/validateRequestSchema");
@@ -443,11 +443,11 @@ router.post(
   resetPassword
 );
 
-router.get("/pending-centers", pageAuthorisation(["SuperAdmin", "Admin", "ClientAdmin"]), getPendingCentersList);
+router.get("/pending-centers", verifyAccessToken, pageAuthorisation(["SuperAdmin", "ClientAdmin"]), getPendingCentersList);
 
-router.post("/approve-center", pageAuthorisation(["SuperAdmin", "Admin", "ClientAdmin"]), approvePendingCenter);
+router.post("/approve-center", verifyAccessToken, pageAuthorisation(["SuperAdmin", "ClientAdmin"]), approvePendingCenter);
 
-router.delete("/reject-center/:UserID", pageAuthorisation(["SuperAdmin", "Admin", "ClientAdmin"]), rejectPendingCenterRegistration);
+router.delete("/reject-center/:UserID", verifyAccessToken, pageAuthorisation(["SuperAdmin", "ClientAdmin"]), rejectPendingCenterRegistration);
 
 router.post(
   "/center-signup",
