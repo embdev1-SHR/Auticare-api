@@ -183,7 +183,16 @@ exports.centerCreateFromPending = (data, callBack) => {
                 return connection.rollback(() => { connection.release(); return callBack(error.message); });
               }
               connection.query(
-                `INSERT INTO centers (UserID, ClientID, CenterName, CenterType, CenterHeadSalutation, CenterHeadName, CenterHeadDesignation, CenterHeadEmailId, CenterHeadPhone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO centers (UserID, ClientID, CenterName, CenterType, CenterHeadSalutation, CenterHeadName, CenterHeadDesignation, CenterHeadEmailId, CenterHeadPhone)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                   ClientID = VALUES(ClientID),
+                   CenterName = VALUES(CenterName),
+                   CenterType = VALUES(CenterType),
+                   CenterHeadName = VALUES(CenterHeadName),
+                   CenterHeadDesignation = VALUES(CenterHeadDesignation),
+                   CenterHeadEmailId = VALUES(CenterHeadEmailId),
+                   CenterHeadPhone = VALUES(CenterHeadPhone)`,
                 [pending.UserID, data.ClientID, centerName, 'Association', '', centerName, 'Director', pending.EmailId, pending.Phone || ''],
                 (error) => {
                   if (error) {
