@@ -129,7 +129,7 @@ const { pageAuthorisation } = require("../middleware/authorization");
  *           description: Internal server error
  */
 
-router.get("/details", pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center", "Therapist"]), userDetails);
+router.get("/details", pageAuthorisation(["SuperAdmin", "Admin", "ClientAdmin", "Center", "Therapist"]), userDetails);
 
 module.exports = router;
 
