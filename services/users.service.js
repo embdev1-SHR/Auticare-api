@@ -24,6 +24,20 @@ exports.getUserByEmailId = (EmailId, callBack) => {
   );
 };
 
+exports.getUserByEmailIdForPasswordReset = (EmailId, callBack) => {
+  db.query(
+    `SELECT lu.* FROM login_users lu
+     INNER JOIN roles ON lu.RoleId = roles.RoleID
+     WHERE lu.EmailId = ? AND lu.Status = 1
+     AND roles.RoleName NOT IN ('SuperAdmin', 'Admin')`,
+    [EmailId],
+    (error, results) => {
+      if (error) return callBack(error.message);
+      return callBack(null, results);
+    }
+  );
+};
+
 exports.getUserByEmailIdNRoles = (EmailId, callBack) => {
   db.query(
     `SELECT * FROM login_users WHERE EmailId = ? AND Status = 1 AND RoleId IN ( 1, 2, 3, 4 )`,
@@ -175,6 +189,7 @@ exports.checkEmailExists = (EmailId, callBack) => {
      AND (
        Status = 1
        OR (Status = 0 AND RoleId = 3 AND UserID NOT IN (SELECT UserID FROM centers))
+       OR (Status = 0 AND RoleId = 2)
      )`,
     [EmailId],
     (error, results) => {
@@ -186,10 +201,67 @@ exports.checkEmailExists = (EmailId, callBack) => {
 
 exports.getPendingCenters = (callBack) => {
   db.query(
-    `SELECT UserID, EmailId, UserName AS CenterName, Phone, AddressLine1, City, State, Country, Create_TS FROM login_users WHERE Status = 0 AND RoleId = 3 ORDER BY Create_TS DESC`,
+    `SELECT lu.UserID, lu.EmailId, COALESCE(c.CenterName, lu.UserName) AS CenterName, lu.Phone, lu.AddressLine1, lu.City, lu.State, lu.Country, lu.Create_TS
+     FROM login_users lu
+     LEFT JOIN centers c ON lu.UserID = c.UserID
+     WHERE lu.Status = 0 AND lu.RoleId = 3
+     ORDER BY lu.Create_TS DESC`,
     (error, results) => {
       if (error) return callBack(error.message);
       return callBack(null, results);
+    }
+  );
+};
+
+exports.getPendingClients = (callBack) => {
+  db.query(
+    `SELECT UserID, EmailId, UserName AS OrgName, Phone, AddressLine1, City, State, Country, Create_TS
+     FROM login_users
+     WHERE Status = 0 AND RoleId = 2
+     ORDER BY Create_TS DESC`,
+    (error, results) => {
+      if (error) return callBack(error.message);
+      return callBack(null, results);
+    }
+  );
+};
+
+exports.createPendingClient = (data, callBack) => {
+  const orgName = data.OrgName || data.EmailId;
+  db.query(
+    `INSERT INTO login_users (EmailId, UserName, Phone, AddressLine1, AddressLine2, City, District, Pincode, State, Country, RoleId, Password, Status, Create_By)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 2, ?, 0, 0)
+     ON DUPLICATE KEY UPDATE
+       UserName = VALUES(UserName),
+       Phone = VALUES(Phone),
+       AddressLine1 = VALUES(AddressLine1),
+       AddressLine2 = VALUES(AddressLine2),
+       City = VALUES(City),
+       District = VALUES(District),
+       Pincode = VALUES(Pincode),
+       State = VALUES(State),
+       Country = VALUES(Country),
+       RoleId = 2,
+       Password = VALUES(Password),
+       Status = 0,
+       Update_By = 0`,
+    [
+      data.EmailId,
+      orgName,
+      data.Phone || "",
+      data.AddressLine1 || "",
+      data.AddressLine2 || "",
+      data.City || "",
+      data.District || "",
+      data.Pincode || "",
+      data.State || "",
+      data.Country || "",
+      data.Password,
+    ],
+    (error, results) => {
+      if (error) return callBack(error.message);
+      if (results.affectedRows >= 1) return callBack(null, "Registration submitted");
+      return callBack("Failed to create registration");
     }
   );
 };

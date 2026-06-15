@@ -22,7 +22,7 @@ exports.clientListDesc = async () => {
 
 exports.clientDetails = (ClientID, callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, subscription_plans.PlanName, ( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID AND clients.ClientID = ? INNER JOIN subscription_plans ON subscription_plans.SubscriptionPlanID = clients.SubscriptionPlanId LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID; `,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, subscription_plans.PlanName, ( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID AND clients.ClientID = ? LEFT JOIN subscription_plans ON subscription_plans.SubscriptionPlanID = clients.SubscriptionPlanId LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID; `,
     [ClientID],
     (error, results) => {
       if (error) {
@@ -34,7 +34,7 @@ exports.clientDetails = (ClientID, callBack) => {
 
 exports.clientDetailsByUserID = (data, callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, subscription_plans.PlanName FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID INNER JOIN subscription_plans ON subscription_plans.SubscriptionPlanID = clients.SubscriptionPlanId WHERE clients.UserID = ?`,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, subscription_plans.PlanName FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN subscription_plans ON subscription_plans.SubscriptionPlanID = clients.SubscriptionPlanId WHERE clients.UserID = ?`,
     // `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, subscription_plans.PlanName FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID INNER JOIN subscription_plans ON subscription_plans.SubscriptionPlanID = clients.SubscriptionPlanId WHERE clients.ClientID = ? AND clients.UserID = ?`,
     [data.UserID],
     // [data.ClientID, data.UserID],
@@ -498,4 +498,64 @@ exports.getClientByUserId = (UserID, callBack) => {
       callBack(error.message);
     } else return callBack(null, results);
   });
+};
+
+exports.clientCreateFromPending = (data, callBack) => {
+  db.getConnection((error, connection) => {
+    if (error) return callBack(error.message);
+    connection.query(
+      `SELECT UserID, EmailId, UserName FROM login_users WHERE UserID = ? AND Status = 0 AND RoleId = 2`,
+      [data.UserID],
+      (error, rows) => {
+        if (error) { connection.release(); return callBack(error.message); }
+        if (!rows.length) { connection.release(); return callBack("Pending client not found or already approved"); }
+        const pending = rows[0];
+        const clientName = pending.UserName || pending.EmailId;
+        connection.beginTransaction((error) => {
+          if (error) { connection.release(); return callBack(error.message); }
+          connection.query(
+            `UPDATE login_users SET Status = 1 WHERE UserID = ? AND Status = 0 AND RoleId = 2`,
+            [pending.UserID],
+            (error) => {
+              if (error) return connection.rollback(() => { connection.release(); return callBack(error.message); });
+              connection.query(
+                `INSERT INTO clients (UserID, ClientName) VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE ClientName = VALUES(ClientName)`,
+                [pending.UserID, clientName],
+                (error) => {
+                  if (error) return connection.rollback(() => { connection.release(); return callBack(error.message); });
+                  connection.commit((error) => {
+                    if (error) return connection.rollback(() => { connection.release(); return callBack(error.message); });
+                    connection.release();
+                    return callBack(null, "Client approved successfully", { EmailId: pending.EmailId, OrgName: clientName });
+                  });
+                }
+              );
+            }
+          );
+        });
+      }
+    );
+  });
+};
+
+exports.rejectPendingClient = (UserID, callBack) => {
+  db.query(
+    `SELECT EmailId, UserName FROM login_users WHERE UserID = ? AND Status = 0 AND RoleId = 2`,
+    [UserID],
+    (error, rows) => {
+      if (error) return callBack(error.message);
+      if (!rows.length) return callBack("Pending client not found");
+      const pending = rows[0];
+      db.query(
+        `DELETE FROM login_users WHERE UserID = ? AND Status = 0 AND RoleId = 2`,
+        [UserID],
+        (error, results) => {
+          if (error) return callBack(error.message);
+          if (results.affectedRows >= 1) return callBack(null, "Client registration rejected", { EmailId: pending.EmailId, OrgName: pending.UserName });
+          return callBack("Pending client not found");
+        }
+      );
+    }
+  );
 };

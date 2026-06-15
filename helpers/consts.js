@@ -538,6 +538,48 @@ exports.centerRejectionHTML = (data) => {
   </body></html>`;
 };
 
+exports.clientApprovalHTML = (data) => {
+  const loginUrl = (process.env.FRONTEND_URL || "https://dashboard.myauticare.com") + "/login";
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Client Account Approved</title>${BASE_STYLE}</head>
+  <body>
+    <div class="wrap">
+      <div class="header"><h1>Account Approved!</h1></div>
+      <div class="body">
+        <h2>Your registration has been approved</h2>
+        <p>Hi${data.OrgName ? " " + data.OrgName : ""},</p>
+        <p>Great news! Your registration on Auticare has been reviewed and <strong>approved</strong>. Your account is now active.</p>
+        <div class="cred-box">
+          <p>Email: <span>${data.EmailId}</span></p>
+          <p>Organization: <span>${data.OrgName || "—"}</span></p>
+        </div>
+        <p>Use the email and password you registered with to log in.</p>
+        <a href="${loginUrl}" class="btn">Log In to Auticare</a>
+      </div>
+      <div class="footer">&copy; ${new Date().getFullYear()} Auticare &mdash; <a href="https://www.myauticare.com" style="color:#30e3ca;">www.myauticare.com</a></div>
+    </div>
+  </body></html>`;
+};
+
+exports.clientRejectionHTML = (data) => {
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Registration Update</title>${BASE_STYLE}</head>
+  <body>
+    <div class="wrap">
+      <div class="header" style="background:#e74c3c;"><h1>Registration Update</h1></div>
+      <div class="body">
+        <h2>Your registration could not be approved</h2>
+        <p>Hi${data.OrgName ? " " + data.OrgName : ""},</p>
+        <p>Thank you for registering on Auticare. After review, we were unable to approve your registration at this time.</p>
+        <p>If you believe this is a mistake or need clarification, please contact our support team at <a href="mailto:support@myauticare.com">support@myauticare.com</a>.</p>
+      </div>
+      <div class="footer">&copy; ${new Date().getFullYear()} Auticare &mdash; <a href="https://www.myauticare.com" style="color:#30e3ca;">www.myauticare.com</a></div>
+    </div>
+  </body></html>`;
+};
+
 exports._welcomeMailHTML_UNUSED = (data) => {
   return `<!DOCTYPE html>
   <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml"

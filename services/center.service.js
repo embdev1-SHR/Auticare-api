@@ -109,7 +109,7 @@ exports.centerCreate = (data, callBack) => {
               3,
               data.Password,
               data.UserID,
-              1,
+              data.Status !== undefined ? data.Status : 1,
             ],
             (error, login_usersResult) => {
               if (error) {
@@ -166,48 +166,40 @@ exports.centerCreateFromPending = (data, callBack) => {
   db.getConnection((error, connection) => {
     if (error) return callBack(error.message);
     connection.query(
-      `SELECT UserID, EmailId, UserName, Phone FROM login_users WHERE UserID = ? AND Status = 0 AND RoleId = 3`,
+      `SELECT lu.UserID, lu.EmailId, lu.UserName, lu.Phone, c.CenterName, c.ClientID
+       FROM login_users lu
+       LEFT JOIN centers c ON lu.UserID = c.UserID
+       WHERE lu.UserID = ? AND lu.Status = 0 AND lu.RoleId = 3`,
       [data.UserID],
       (error, rows) => {
         if (error) { connection.release(); return callBack(error.message); }
         if (!rows.length) { connection.release(); return callBack("Pending center not found or already approved"); }
         const pending = rows[0];
-        const centerName = pending.UserName || pending.EmailId;
-        connection.beginTransaction((error) => {
-          if (error) { connection.release(); return callBack(error.message); }
-          connection.query(
-            `UPDATE login_users SET Status = 1 WHERE UserID = ? AND Status = 0 AND RoleId = 3`,
-            [pending.UserID],
-            (error, updateResult) => {
-              if (error) {
-                return connection.rollback(() => { connection.release(); return callBack(error.message); });
-              }
-              connection.query(
-                `INSERT INTO centers (UserID, ClientID, CenterName, CenterType, CenterHeadSalutation, CenterHeadName, CenterHeadDesignation, CenterHeadEmailId, CenterHeadPhone)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE
-                   ClientID = VALUES(ClientID),
-                   CenterName = VALUES(CenterName),
-                   CenterType = VALUES(CenterType),
-                   CenterHeadName = VALUES(CenterHeadName),
-                   CenterHeadDesignation = VALUES(CenterHeadDesignation),
-                   CenterHeadEmailId = VALUES(CenterHeadEmailId),
-                   CenterHeadPhone = VALUES(CenterHeadPhone)`,
-                [pending.UserID, data.ClientID, centerName, 'Association', '', centerName, 'Director', pending.EmailId, pending.Phone || ''],
-                (error) => {
-                  if (error) {
-                    return connection.rollback(() => { connection.release(); return callBack(error.message); });
-                  }
-                  connection.commit((error) => {
-                    if (error) return connection.rollback(() => { connection.release(); return callBack(error.message); });
-                    connection.release();
-                    return callBack(null, "Center approved successfully", { EmailId: pending.EmailId, CenterName: centerName });
-                  });
-                }
-              );
+        const centerName = pending.CenterName || pending.UserName || pending.EmailId;
+        const hasCentersRow = !!pending.CenterName;
+        connection.query(
+          `UPDATE login_users SET Status = 1 WHERE UserID = ? AND Status = 0 AND RoleId = 3`,
+          [pending.UserID],
+          (error) => {
+            if (error) { connection.release(); return callBack(error.message); }
+            if (hasCentersRow) {
+              connection.release();
+              return callBack(null, "Center approved successfully", { EmailId: pending.EmailId, CenterName: centerName });
             }
-          );
-        });
+            const clientID = data.ClientID || pending.ClientID;
+            if (!clientID) { connection.release(); return callBack("ClientID required for legacy center approval"); }
+            connection.query(
+              `INSERT INTO centers (UserID, ClientID, CenterName, CenterType, CenterHeadSalutation, CenterHeadName, CenterHeadDesignation, CenterHeadEmailId, CenterHeadPhone)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [pending.UserID, clientID, centerName, 'Association', '', centerName, 'Director', pending.EmailId, pending.Phone || ''],
+              (error) => {
+                connection.release();
+                if (error) return callBack(error.message);
+                return callBack(null, "Center approved successfully", { EmailId: pending.EmailId, CenterName: centerName });
+              }
+            );
+          }
+        );
       }
     );
   });
@@ -215,21 +207,25 @@ exports.centerCreateFromPending = (data, callBack) => {
 
 exports.rejectPendingCenter = (UserID, callBack) => {
   db.query(
-    `SELECT EmailId, UserName FROM login_users WHERE UserID = ? AND Status = 0 AND RoleId = 3`,
+    `SELECT lu.EmailId, lu.UserName, c.CenterName FROM login_users lu LEFT JOIN centers c ON lu.UserID = c.UserID WHERE lu.UserID = ? AND lu.Status = 0 AND lu.RoleId = 3`,
     [UserID],
     (error, rows) => {
       if (error) return callBack(error.message);
       if (!rows.length) return callBack("Pending center not found");
       const pending = rows[0];
-      db.query(
-        `DELETE FROM login_users WHERE UserID = ? AND Status = 0 AND RoleId = 3`,
-        [UserID],
-        (error, results) => {
-          if (error) return callBack(error.message);
-          if (results.affectedRows >= 1) return callBack(null, "Center registration rejected", { EmailId: pending.EmailId, CenterName: pending.UserName });
-          return callBack("Pending center not found");
-        }
-      );
+      const centerName = pending.CenterName || pending.UserName;
+      db.query(`DELETE FROM centers WHERE UserID = ?`, [UserID], (error) => {
+        if (error) return callBack(error.message);
+        db.query(
+          `DELETE FROM login_users WHERE UserID = ? AND Status = 0 AND RoleId = 3`,
+          [UserID],
+          (error, results) => {
+            if (error) return callBack(error.message);
+            if (results.affectedRows >= 1) return callBack(null, "Center registration rejected", { EmailId: pending.EmailId, CenterName: centerName });
+            return callBack("Pending center not found");
+          }
+        );
+      });
     }
   );
 };

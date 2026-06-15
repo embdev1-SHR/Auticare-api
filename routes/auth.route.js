@@ -12,6 +12,10 @@ const {
   getPendingCentersList,
   approvePendingCenter,
   rejectPendingCenterRegistration,
+  clientSignup,
+  getPendingClientsList,
+  approvePendingClient,
+  rejectPendingClientRegistration,
 } = require("../controllers/auth.controller");
 const { pageAuthorisation } = require("../middleware/authorization");
 const { verifyConfirmOtpToken, verifyAccessToken } = require("../middleware/authentication");
@@ -458,6 +462,23 @@ router.post(
   ],
   validateRequestSchema,
   centerSignup
+);
+
+router.get("/pending-clients", verifyAccessToken, pageAuthorisation(["SuperAdmin"]), getPendingClientsList);
+
+router.post("/approve-client", verifyAccessToken, pageAuthorisation(["SuperAdmin"]), approvePendingClient);
+
+router.delete("/reject-client/:UserID", verifyAccessToken, pageAuthorisation(["SuperAdmin"]), rejectPendingClientRegistration);
+
+router.post(
+  "/client-signup",
+  [
+    body("EmailId").isEmail().normalizeEmail(),
+    body("Password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters"),
+    body("OrgName").not().isEmpty().withMessage("Organization name is required"),
+  ],
+  validateRequestSchema,
+  clientSignup
 );
 
 module.exports = router;

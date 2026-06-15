@@ -196,16 +196,15 @@ exports.centerCreate = (req, res) => {
           });
         }
         data.ClientID = results[0].ClientID;
+        data.Status = 0;
         centerCreate(data, (error, results) => {
           if (error) {
             console.log(error);
             return res.status(500).send({ success: false, errors: { message: error } });
           }
-          sendMail(data, "Your Auticare Center Account", welcomeMailHTML({ EmailId: data.EmailId, Password: password, AccountType: "center account", Name: data.CenterName })).finally(() => {
-            res.status(201).send({
-              success: true,
-              results: { message: results },
-            });
+          res.status(201).send({
+            success: true,
+            results: { message: "Center submitted for admin approval" },
           });
         });
       });

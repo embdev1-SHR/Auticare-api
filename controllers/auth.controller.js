@@ -1,6 +1,6 @@
 const { hash, compare } = require("bcrypt");
 const { verify } = require("jsonwebtoken");
-const { forgotPasswordHTML, centerApprovalHTML, centerRejectionHTML } = require("../helpers/consts");
+const { forgotPasswordHTML, centerApprovalHTML, centerRejectionHTML, clientApprovalHTML, clientRejectionHTML } = require("../helpers/consts");
 const { sendMail } = require("../helpers/email");
 const { generateOTP } = require("../helpers/randomNumbers");
 const {
@@ -18,11 +18,15 @@ const {
   deleteRefreshToken,
   deleteAllRefreshToken,
   getUserByEmailIdNRoles,
+  getUserByEmailIdForPasswordReset,
   checkEmailExists,
   createPendingCenter,
   getPendingCenters,
+  createPendingClient,
+  getPendingClients,
 } = require("../services/users.service");
 const { centerCreateFromPending, rejectPendingCenter } = require("../services/center.service");
+const { clientCreateFromPending, rejectPendingClient } = require("../services/client.service");
 
 exports.login = (req, res) => {
   const data = {
@@ -233,7 +237,7 @@ exports.forgotPassword = (req, res) => {
   let data = {
     EmailId: req.body.EmailId,
   };
-  getUserByEmailId(data.EmailId, (error, getUserByEmailIdResults) => {
+  getUserByEmailIdForPasswordReset(data.EmailId, (error, getUserByEmailIdResults) => {
     if (error) {
       console.log(error);
       return res
@@ -243,7 +247,7 @@ exports.forgotPassword = (req, res) => {
     if (!getUserByEmailIdResults.length) {
       return res.status(400).send({
         success: false,
-        errors: { message: "Invalid email" },
+        errors: { message: "Email not found or not eligible for password reset" },
       });
     }
     data.otp = generateOTP();
@@ -258,25 +262,12 @@ exports.forgotPassword = (req, res) => {
         getUserByEmailIdResults[0],
         "Password Reset OTP",
         forgotPasswordHTML(data)
-      )
-        .then((result) => {
-          if (result.status == 200 || result.status == 201) {
-            return res.status(200).send({
-              success: true,
-              results: { message: "Email Send Successfully" },
-            });
-          } else {
-            return res
-              .status(result.status || 500)
-              .send({ success: false, errors: { message: result.statusText } });
-          }
-        })
-        .catch((error) => {
-          console.log(error);
-          return res
-            .status(status || 500)
-            .send({ success: false, errors: { message: error } });
+      ).finally(() => {
+        return res.status(200).send({
+          success: true,
+          results: { message: "Email Send Successfully" },
         });
+      });
     });
   });
 };
@@ -389,6 +380,94 @@ exports.rejectPendingCenterRegistration = (req, res) => {
           { EmailId: centerInfo.EmailId },
           "Auticare Center Registration Update",
           centerRejectionHTML({ CenterName: centerInfo.CenterName })
+        )
+      : Promise.resolve();
+
+    emailPromise.finally(() => {
+      res.status(200).send({ success: true, results: { message: result } });
+    });
+  });
+};
+
+exports.clientSignup = (req, res) => {
+  const data = {
+    EmailId: req.body.EmailId,
+    Phone: req.body.Phone || "",
+    Password: req.body.Password,
+    OrgName: req.body.OrgName || "",
+    AddressLine1: req.body.AddressLine1 || "",
+    AddressLine2: req.body.AddressLine2 || "",
+    City: req.body.City || "",
+    District: req.body.District || "",
+    Pincode: req.body.Pincode || "",
+    State: req.body.State || "",
+    Country: req.body.Country || "",
+  };
+
+  checkEmailExists(data.EmailId, (error, exists) => {
+    if (error) {
+      return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    if (exists) {
+      return res.status(400).send({ success: false, errors: { message: "Email already registered" } });
+    }
+    hash(data.Password, 10, (error, hashedPassword) => {
+      if (error) {
+        return res.status(500).send({ success: false, errors: { message: error.message } });
+      }
+      createPendingClient({ ...data, Password: hashedPassword }, (error, result) => {
+        if (error) {
+          return res.status(500).send({ success: false, errors: { message: error } });
+        }
+        return res.status(200).send({
+          success: true,
+          results: { message: "Registration submitted. An admin will review and activate your account." },
+        });
+      });
+    });
+  });
+};
+
+exports.getPendingClientsList = (req, res) => {
+  getPendingClients((error, results) => {
+    if (error) {
+      return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    return res.status(200).send({ success: true, results: { data: results } });
+  });
+};
+
+exports.approvePendingClient = (req, res) => {
+  const data = { UserID: req.body.UserID };
+  clientCreateFromPending(data, (error, result, clientInfo) => {
+    if (error) {
+      return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    const emailPromise = (clientInfo && clientInfo.EmailId)
+      ? sendMail(
+          { EmailId: clientInfo.EmailId },
+          "Your Auticare Account is Approved!",
+          clientApprovalHTML({ EmailId: clientInfo.EmailId, OrgName: clientInfo.OrgName })
+        )
+      : Promise.resolve();
+
+    emailPromise.finally(() => {
+      res.status(200).send({ success: true, results: { message: result } });
+    });
+  });
+};
+
+exports.rejectPendingClientRegistration = (req, res) => {
+  const UserID = req.params.UserID;
+  rejectPendingClient(UserID, (error, result, clientInfo) => {
+    if (error) {
+      return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    const emailPromise = (clientInfo && clientInfo.EmailId)
+      ? sendMail(
+          { EmailId: clientInfo.EmailId },
+          "Auticare Registration Update",
+          clientRejectionHTML({ OrgName: clientInfo.OrgName })
         )
       : Promise.resolve();
 
