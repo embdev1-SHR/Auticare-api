@@ -4,7 +4,7 @@ const promiseDB = db.promise();
 
 exports.clientList = (callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, ( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID WHERE login_users.Status = 1 GROUP BY clients.ClientID`,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, COALESCE(clients.ClientName, login_users.UserName) AS ClientName, CASE WHEN clients.ClientType IS NOT NULL THEN 'Complete' ELSE 'Pending' END AS OnboardingStatus, COALESCE(clients.SubscriptionPlanStatus, 'Not Assigned') AS PaymentStatus, COALESCE(( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ), 0) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID WHERE login_users.Status = 1 AND login_users.RoleId = 2 GROUP BY login_users.UserID`,
     (error, results) => {
       if (error) {
         return callBack(error.message);
@@ -15,7 +15,7 @@ exports.clientList = (callBack) => {
 
 exports.clientListDesc = async () => {
   const [rows] = await promiseDB.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, ( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID GROUP BY clients.ClientID ORDER BY clients.Create_TS DESC LIMIT 5;`
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, COALESCE(clients.ClientName, login_users.UserName) AS ClientName, CASE WHEN clients.ClientType IS NOT NULL THEN 'Complete' ELSE 'Pending' END AS OnboardingStatus, COALESCE(clients.SubscriptionPlanStatus, 'Not Assigned') AS PaymentStatus, COALESCE(( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ), 0) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID WHERE login_users.Status = 1 AND login_users.RoleId = 2 GROUP BY login_users.UserID ORDER BY login_users.Create_TS DESC LIMIT 5;`
   );
   return rows;
 };
@@ -34,7 +34,7 @@ exports.clientDetails = (ClientID, callBack) => {
 
 exports.clientDetailsByUserID = (data, callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, subscription_plans.PlanName FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN subscription_plans ON subscription_plans.SubscriptionPlanID = clients.SubscriptionPlanId WHERE clients.UserID = ?`,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, subscription_plans.PlanName FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN subscription_plans ON subscription_plans.SubscriptionPlanID = clients.SubscriptionPlanId WHERE login_users.UserID = ?`,
     // `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, subscription_plans.PlanName FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID INNER JOIN subscription_plans ON subscription_plans.SubscriptionPlanID = clients.SubscriptionPlanId WHERE clients.ClientID = ? AND clients.UserID = ?`,
     [data.UserID],
     // [data.ClientID, data.UserID],
@@ -48,7 +48,7 @@ exports.clientDetailsByUserID = (data, callBack) => {
 
 exports.clientSearch = (data, callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.* FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID WHERE clients.ClientName LIKE '%${data.ClientName}%' AND login_users.EmailId LIKE '%${data.EmailId}%' `,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, COALESCE(clients.ClientName, login_users.UserName) AS ClientName, CASE WHEN clients.ClientType IS NOT NULL THEN 'Complete' ELSE 'Pending' END AS OnboardingStatus, COALESCE(clients.SubscriptionPlanStatus, 'Not Assigned') AS PaymentStatus FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID WHERE (clients.ClientName LIKE '%${data.ClientName}%' OR login_users.UserName LIKE '%${data.ClientName}%') AND login_users.EmailId LIKE '%${data.EmailId}%' AND login_users.Status = 1 AND login_users.RoleId = 2`,
     (error, results) => {
       if (error) {
         return callBack(error.message);
@@ -373,22 +373,31 @@ exports.clientOnboardByUserID = (data, callBack) => {
         (error) => {
           if (error) return connection.rollback(() => { connection.release(); callBack(error.message); });
           connection.query(
-            `UPDATE clients SET ClientName = ?, WebsiteURL = ?, ClientType = ?, OrganizationType = ?, ContactPersonName = ?, ContactPersonDesignation = ?, ContactEmailId = ?, BillingAddressLine1 = ?, BillingAddressLine2 = ?, BillingCity = ?, BillingDistrict = ?, BillingPincode = ?, BillingState = ?, BillingCountry = ?, GSTNumber = ?, Bank = ?, BankAccountNumber = ?, Branch = ?, IFSCCode = ? WHERE UserID = ?`,
+            `INSERT INTO clients (UserID, ClientName, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', 'Pending Setup', NOW(), NOW())
+             ON DUPLICATE KEY UPDATE
+               ClientName = VALUES(ClientName), WebsiteURL = VALUES(WebsiteURL), ClientType = VALUES(ClientType),
+               OrganizationType = VALUES(OrganizationType), ContactPersonName = VALUES(ContactPersonName),
+               ContactPersonDesignation = VALUES(ContactPersonDesignation), ContactEmailId = VALUES(ContactEmailId),
+               BillingAddressLine1 = VALUES(BillingAddressLine1), BillingAddressLine2 = VALUES(BillingAddressLine2),
+               BillingCity = VALUES(BillingCity), BillingDistrict = VALUES(BillingDistrict),
+               BillingPincode = VALUES(BillingPincode), BillingState = VALUES(BillingState),
+               BillingCountry = VALUES(BillingCountry), GSTNumber = VALUES(GSTNumber),
+               Bank = VALUES(Bank), BankAccountNumber = VALUES(BankAccountNumber),
+               Branch = VALUES(Branch), IFSCCode = VALUES(IFSCCode)`,
             [
-              data.ClientName, data.WebsiteURL || null, data.ClientType, data.OrganizationType || null,
+              data.UserID, data.ClientName, data.WebsiteURL || null, data.ClientType, data.OrganizationType || null,
               data.ContactPersonName, data.ContactPersonDesignation || null, data.ContactEmailId || null,
               data.BillingAddressLine1 || null, data.BillingAddressLine2 || null, data.BillingCity || null,
               data.BillingDistrict || null, data.BillingPincode || null, data.BillingState || null,
               data.BillingCountry || null, data.GSTNumber || null,
               data.Bank || null, data.BankAccountNumber || null, data.Branch || null, data.IFSCCode || null,
-              data.UserID,
             ],
             (error, result) => {
               if (error) return connection.rollback(() => { connection.release(); callBack(error.message); });
               connection.commit((error) => {
                 connection.release();
                 if (error) return callBack(error.message);
-                if (result.affectedRows < 1) return callBack("Client not found", null, 404);
                 return callBack(null, "Onboarding completed successfully");
               });
             }
@@ -552,16 +561,7 @@ exports.clientCreateFromPending = (data, callBack) => {
         (error, updateResult) => {
           if (error) return callBack(error.message);
           if (!updateResult.affectedRows) return callBack("Failed to activate client");
-          db.query(
-            `INSERT INTO clients (UserID, ClientName, ClientLogo, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanId, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate, PaymentId, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode)
-             VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '', '', NULL, NULL, NOW(), NOW(), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
-             ON DUPLICATE KEY UPDATE ClientName = VALUES(ClientName)`,
-            [pending.UserID, clientName],
-            (insertError) => {
-              if (insertError) console.error("clients row insert warning:", insertError.message);
-              return callBack(null, "Client approved successfully", { EmailId: pending.EmailId, OrgName: clientName });
-            }
-          );
+          return callBack(null, "Client approved successfully", { EmailId: pending.EmailId, OrgName: clientName });
         }
       );
     }
