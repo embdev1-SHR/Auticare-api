@@ -5,6 +5,7 @@ const {
   clientDetailsByUserID,
   clientUpdate,
   clientUpdateByUserID,
+  clientOnboardByUserID,
   clientDelete,
   clientHardDelete,
   clientSearch,
@@ -336,6 +337,47 @@ exports.clientPermanentDelete = (req, res) => {
     if (error) {
       console.log(error);
       return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    return res.status(200).send({ success: true, results: { message: results } });
+  });
+};
+
+exports.clientOnboard = (req, res) => {
+  if (req.userData.RoleName !== "ClientAdmin") {
+    return res.status(403).send({ success: false, errors: { message: "The user does not have access" } });
+  }
+  const data = {
+    UserID: req.userData.UserID,
+    ClientName: req.body.ClientName,
+    WebsiteURL: req.body.WebsiteURL || null,
+    ClientType: req.body.ClientType,
+    OrganizationType: req.body.OrganizationType || null,
+    ContactPersonName: req.body.ContactPersonName,
+    ContactPersonDesignation: req.body.ContactPersonDesignation || null,
+    ContactEmailId: req.body.ContactEmailId || null,
+    Phone: req.body.Phone || null,
+    AddressLine1: req.body.AddressLine1 || null,
+    AddressLine2: req.body.AddressLine2 || null,
+    City: req.body.City || null,
+    Pincode: req.body.Pincode || null,
+    State: req.body.State || null,
+    Country: req.body.Country || null,
+    BillingAddressLine1: req.body.BillingAddressLine1 || null,
+    BillingAddressLine2: req.body.BillingAddressLine2 || null,
+    BillingCity: req.body.BillingCity || null,
+    BillingDistrict: req.body.BillingDistrict || null,
+    BillingPincode: req.body.BillingPincode || null,
+    BillingState: req.body.BillingState || null,
+    BillingCountry: req.body.BillingCountry || null,
+    GSTNumber: req.body.GSTNumber || null,
+    Bank: req.body.Bank || null,
+    BankAccountNumber: req.body.BankAccountNumber || null,
+    Branch: req.body.Branch || null,
+    IFSCCode: req.body.IFSCCode || null,
+  };
+  clientOnboardByUserID(data, (error, results, status) => {
+    if (error) {
+      return res.status(status || 500).send({ success: false, errors: { message: error } });
     }
     return res.status(200).send({ success: true, results: { message: results } });
   });

@@ -4,6 +4,7 @@ const {
   clientList,
   clientDetails,
   clientCreate,
+  clientOnboard,
   clientUpdate,
   clientDelete,
   clientPermanentDelete,
@@ -69,6 +70,20 @@ const { pageAuthorisation } = require("../middleware/authorization");
  *           description: Internal server error
  */
 router.get("/", pageAuthorisation(["SuperAdmin"]), clientList);
+
+router.post(
+  "/onboard",
+  pageAuthorisation(["ClientAdmin"]),
+  [
+    body("ClientName").not().isEmpty().withMessage("Field is required").trim(),
+    body("ClientType").not().isEmpty().withMessage("Field is required").trim(),
+    body("ContactPersonName").not().isEmpty().withMessage("Field is required").trim(),
+    body("WebsiteURL").optional({ checkFalsy: true }).isURL({ require_protocol: false }).withMessage("Value must be a url"),
+    body("ContactEmailId").optional({ checkFalsy: true }).isEmail().normalizeEmail(),
+  ],
+  validateRequestSchema,
+  clientOnboard
+);
 
 /**
  * @swagger

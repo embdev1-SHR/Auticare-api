@@ -362,6 +362,43 @@ exports.clientUpdateByUserID = (data, callBack) => {
   });
 };
 
+exports.clientOnboardByUserID = (data, callBack) => {
+  db.getConnection((error, connection) => {
+    if (error) return callBack(error.message);
+    connection.beginTransaction((error) => {
+      if (error) return callBack(error.message);
+      connection.query(
+        `UPDATE login_users SET Phone = ?, AddressLine1 = ?, AddressLine2 = ?, City = ?, Pincode = ?, State = ?, Country = ? WHERE UserID = ?`,
+        [data.Phone, data.AddressLine1, data.AddressLine2, data.City, data.Pincode, data.State, data.Country, data.UserID],
+        (error) => {
+          if (error) return connection.rollback(() => { connection.release(); callBack(error.message); });
+          connection.query(
+            `UPDATE clients SET ClientName = ?, WebsiteURL = ?, ClientType = ?, OrganizationType = ?, ContactPersonName = ?, ContactPersonDesignation = ?, ContactEmailId = ?, BillingAddressLine1 = ?, BillingAddressLine2 = ?, BillingCity = ?, BillingDistrict = ?, BillingPincode = ?, BillingState = ?, BillingCountry = ?, GSTNumber = ?, Bank = ?, BankAccountNumber = ?, Branch = ?, IFSCCode = ? WHERE UserID = ?`,
+            [
+              data.ClientName, data.WebsiteURL || null, data.ClientType, data.OrganizationType || null,
+              data.ContactPersonName, data.ContactPersonDesignation || null, data.ContactEmailId || null,
+              data.BillingAddressLine1 || null, data.BillingAddressLine2 || null, data.BillingCity || null,
+              data.BillingDistrict || null, data.BillingPincode || null, data.BillingState || null,
+              data.BillingCountry || null, data.GSTNumber || null,
+              data.Bank || null, data.BankAccountNumber || null, data.Branch || null, data.IFSCCode || null,
+              data.UserID,
+            ],
+            (error, result) => {
+              if (error) return connection.rollback(() => { connection.release(); callBack(error.message); });
+              connection.commit((error) => {
+                connection.release();
+                if (error) return callBack(error.message);
+                if (result.affectedRows < 1) return callBack("Client not found", null, 404);
+                return callBack(null, "Onboarding completed successfully");
+              });
+            }
+          );
+        }
+      );
+    });
+  });
+};
+
 exports.clientDelete = ({ ClientID, Status }, callBack) => {
   db.getConnection((error, connection) => {
     if (error) {
@@ -516,8 +553,8 @@ exports.clientCreateFromPending = (data, callBack) => {
           if (error) return callBack(error.message);
           if (!updateResult.affectedRows) return callBack("Failed to activate client");
           db.query(
-            `INSERT INTO clients (UserID, ClientName, IncorporationCertificateURL, RegistrationCertificateURL, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode)
-             VALUES (?, ?, '', '', '', '', '', '', '', '', '', '', '', '', '', '')
+            `INSERT INTO clients (UserID, ClientName, ClientLogo, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanId, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate, PaymentId, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode)
+             VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '', '', NULL, NULL, NOW(), NOW(), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
              ON DUPLICATE KEY UPDATE ClientName = VALUES(ClientName)`,
             [pending.UserID, clientName],
             (insertError) => {
