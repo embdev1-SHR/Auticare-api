@@ -10,6 +10,7 @@ const {
   clientHardDelete,
   clientSearch,
   activateClientSubscription,
+  deleteUnonboardedClient,
 } = require("../services/client.service");
 const { hash } = require("bcrypt");
 const { generatePassword } = require("../helpers/randomNumbers");
@@ -326,6 +327,16 @@ exports.clientDelete = (req, res) => {
       },
     });
   }
+};
+
+exports.deleteUnonboarded = (req, res) => {
+  if (req.userData.RoleName !== "SuperAdmin") {
+    return res.status(403).send({ success: false, errors: { message: "The user does not have access" } });
+  }
+  deleteUnonboardedClient(req.params.UserID, (error, results, status) => {
+    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true, results: { message: results } });
+  });
 };
 
 exports.clientPermanentDelete = (req, res) => {

@@ -514,6 +514,18 @@ exports.clientHardDelete = ({ ClientID }, callBack) => {
   });
 };
 
+exports.deleteUnonboardedClient = (UserID, callBack) => {
+  db.query(
+    `DELETE FROM login_users WHERE UserID = ? AND RoleId = 2 AND UserID NOT IN (SELECT UserID FROM clients)`,
+    [UserID],
+    (error, result) => {
+      if (error) return callBack(error.message);
+      if (result.affectedRows < 1) return callBack("Client not found or already has a profile row", null, 404);
+      return callBack(null, "Client deleted successfully");
+    }
+  );
+};
+
 exports.getClientByClientId = (ClientID, callBack) => {
   db.query(
     `SELECT * FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID AND clients.ClientID = ? AND login_users.Status = 1 `,
