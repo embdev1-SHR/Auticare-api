@@ -501,42 +501,34 @@ exports.getClientByUserId = (UserID, callBack) => {
 };
 
 exports.clientCreateFromPending = (data, callBack) => {
-  db.getConnection((error, connection) => {
-    if (error) return callBack(error.message);
-    connection.query(
-      `SELECT UserID, EmailId, UserName FROM login_users WHERE UserID = ? AND Status = 0 AND RoleId = 2`,
-      [data.UserID],
-      (error, rows) => {
-        if (error) { connection.release(); return callBack(error.message); }
-        if (!rows.length) { connection.release(); return callBack("Pending client not found or already approved"); }
-        const pending = rows[0];
-        const clientName = pending.UserName || pending.EmailId;
-        connection.beginTransaction((error) => {
-          if (error) { connection.release(); return callBack(error.message); }
-          connection.query(
-            `UPDATE login_users SET Status = 1 WHERE UserID = ? AND Status = 0 AND RoleId = 2`,
-            [pending.UserID],
-            (error) => {
-              if (error) return connection.rollback(() => { connection.release(); return callBack(error.message); });
-              connection.query(
-                `INSERT INTO clients (UserID, ClientName) VALUES (?, ?)
-                 ON DUPLICATE KEY UPDATE ClientName = VALUES(ClientName)`,
-                [pending.UserID, clientName],
-                (error) => {
-                  if (error) return connection.rollback(() => { connection.release(); return callBack(error.message); });
-                  connection.commit((error) => {
-                    if (error) return connection.rollback(() => { connection.release(); return callBack(error.message); });
-                    connection.release();
-                    return callBack(null, "Client approved successfully", { EmailId: pending.EmailId, OrgName: clientName });
-                  });
-                }
-              );
+  db.query(
+    `SELECT UserID, EmailId, UserName FROM login_users WHERE UserID = ? AND Status = 0 AND RoleId = 2`,
+    [data.UserID],
+    (error, rows) => {
+      if (error) return callBack(error.message);
+      if (!rows.length) return callBack("Pending client not found or already approved");
+      const pending = rows[0];
+      const clientName = pending.UserName || pending.EmailId;
+      db.query(
+        `UPDATE login_users SET Status = 1 WHERE UserID = ? AND Status = 0 AND RoleId = 2`,
+        [pending.UserID],
+        (error, updateResult) => {
+          if (error) return callBack(error.message);
+          if (!updateResult.affectedRows) return callBack("Failed to activate client");
+          db.query(
+            `INSERT INTO clients (UserID, ClientName, IncorporationCertificateURL, RegistrationCertificateURL, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode)
+             VALUES (?, ?, '', '', '', '', '', '', '', '', '', '', '', '', '', '')
+             ON DUPLICATE KEY UPDATE ClientName = VALUES(ClientName)`,
+            [pending.UserID, clientName],
+            (insertError) => {
+              if (insertError) console.error("clients row insert warning:", insertError.message);
+              return callBack(null, "Client approved successfully", { EmailId: pending.EmailId, OrgName: clientName });
             }
           );
-        });
-      }
-    );
-  });
+        }
+      );
+    }
+  );
 };
 
 exports.rejectPendingClient = (UserID, callBack) => {
