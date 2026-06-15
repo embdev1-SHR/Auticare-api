@@ -9,6 +9,7 @@ const {
   clientDelete,
   clientPermanentDelete,
   deleteUnonboarded,
+  updateUnonboarded,
   assignSubscription,
   clientSearch,
   activateClientSubscription,
@@ -897,6 +898,24 @@ router.delete(
   "/user/:UserID",
   pageAuthorisation(["SuperAdmin"]),
   deleteUnonboarded
+);
+
+router.put(
+  "/user/:UserID",
+  pageAuthorisation(["SuperAdmin"]),
+  [
+    body("UserName").optional({ checkFalsy: true }).trim(),
+    body("EmailId").optional({ checkFalsy: true }).isEmail().normalizeEmail(),
+    body("Phone").optional({ checkFalsy: true }).trim(),
+    body("AddressLine1").optional({ checkFalsy: true }).trim(),
+    body("AddressLine2").optional({ checkFalsy: true }).trim(),
+    body("City").optional({ checkFalsy: true }).trim(),
+    body("Pincode").optional({ checkFalsy: true }).trim(),
+    body("State").optional({ checkFalsy: true }).trim(),
+    body("Country").optional({ checkFalsy: true }).trim(),
+  ],
+  validateRequestSchema,
+  updateUnonboarded
 );
 
 router.post(

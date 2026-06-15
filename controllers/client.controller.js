@@ -12,6 +12,7 @@ const {
   activateClientSubscription,
   deleteUnonboardedClient,
   assignSubscriptionByUserID,
+  updateUnonboardedClientDetails,
 } = require("../services/client.service");
 const { hash } = require("bcrypt");
 const { generatePassword } = require("../helpers/randomNumbers");
@@ -342,9 +343,16 @@ exports.assignSubscription = (req, res) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
     if (!results.length) return res.status(404).send({ success: false, errors: { message: "Subscription plan not found" } });
     const plan = results[0];
+    const days = parseInt(plan.NumberOfPlanActiveDays, 10);
+    if (!days || days <= 0 || days > 36500) {
+      return res.status(400).send({
+        success: false,
+        errors: { message: `Subscription plan has an invalid duration (${plan.NumberOfPlanActiveDays} days). Please correct the plan configuration before assigning it.` },
+      });
+    }
     const today = new Date();
     const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + plan.NumberOfPlanActiveDays);
+    endDate.setDate(endDate.getDate() + days);
     const data = {
       UserID: req.params.UserID,
       ClientName: req.body.ClientName || req.params.UserID,
@@ -364,6 +372,28 @@ exports.deleteUnonboarded = (req, res) => {
     return res.status(403).send({ success: false, errors: { message: "The user does not have access" } });
   }
   deleteUnonboardedClient(req.params.UserID, (error, results, status) => {
+    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true, results: { message: results } });
+  });
+};
+
+exports.updateUnonboarded = (req, res) => {
+  if (req.userData.RoleName !== "SuperAdmin") {
+    return res.status(403).send({ success: false, errors: { message: "The user does not have access" } });
+  }
+  const data = {
+    UserID: req.params.UserID,
+    UserName: req.body.UserName || null,
+    EmailId: req.body.EmailId || null,
+    Phone: req.body.Phone || null,
+    AddressLine1: req.body.AddressLine1 || null,
+    AddressLine2: req.body.AddressLine2 || null,
+    City: req.body.City || null,
+    Pincode: req.body.Pincode || null,
+    State: req.body.State || null,
+    Country: req.body.Country || null,
+  };
+  updateUnonboardedClientDetails(data, (error, results, status) => {
     if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true, results: { message: results } });
   });

@@ -552,6 +552,18 @@ exports.deleteUnonboardedClient = (UserID, callBack) => {
   );
 };
 
+exports.updateUnonboardedClientDetails = (data, callBack) => {
+  db.query(
+    `UPDATE login_users SET UserName = ?, EmailId = ?, Phone = ?, AddressLine1 = ?, AddressLine2 = ?, City = ?, Pincode = ?, State = ?, Country = ? WHERE UserID = ? AND RoleId = 2`,
+    [data.UserName, data.EmailId, data.Phone, data.AddressLine1, data.AddressLine2, data.City, data.Pincode, data.State, data.Country, data.UserID],
+    (error, result) => {
+      if (error) return callBack(error.message);
+      if (result.affectedRows < 1) return callBack("Client not found", null, 404);
+      return callBack(null, "Client updated successfully");
+    }
+  );
+};
+
 exports.getClientByClientId = (ClientID, callBack) => {
   db.query(
     `SELECT * FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID AND clients.ClientID = ? AND login_users.Status = 1 `,
