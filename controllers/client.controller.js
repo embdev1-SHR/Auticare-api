@@ -11,6 +11,7 @@ const {
   clientSearch,
   activateClientSubscription,
   deleteUnonboardedClient,
+  assignSubscriptionByUserID,
 } = require("../services/client.service");
 const { hash } = require("bcrypt");
 const { generatePassword } = require("../helpers/randomNumbers");
@@ -327,6 +328,35 @@ exports.clientDelete = (req, res) => {
       },
     });
   }
+};
+
+exports.assignSubscription = (req, res) => {
+  if (req.userData.RoleName !== "SuperAdmin") {
+    return res.status(403).send({ success: false, errors: { message: "The user does not have access" } });
+  }
+  const { SubscriptionPlanId } = req.body;
+  if (!SubscriptionPlanId) {
+    return res.status(400).send({ success: false, errors: { message: "SubscriptionPlanId is required" } });
+  }
+  subscriptionPlanDetails(SubscriptionPlanId, (error, results) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    if (!results.length) return res.status(404).send({ success: false, errors: { message: "Subscription plan not found" } });
+    const plan = results[0];
+    const today = new Date();
+    const endDate = new Date(today);
+    endDate.setDate(endDate.getDate() + plan.NumberOfPlanActiveDays);
+    const data = {
+      UserID: req.params.UserID,
+      ClientName: req.body.ClientName || req.params.UserID,
+      SubscriptionPlanId,
+      activatedDate: today.toISOString().split("T")[0],
+      endDate: endDate.toISOString().split("T")[0],
+    };
+    assignSubscriptionByUserID(data, (error, results) => {
+      if (error) return res.status(500).send({ success: false, errors: { message: error } });
+      return res.status(200).send({ success: true, results: { message: results } });
+    });
+  });
 };
 
 exports.deleteUnonboarded = (req, res) => {

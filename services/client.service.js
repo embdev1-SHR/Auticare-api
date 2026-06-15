@@ -4,7 +4,7 @@ const promiseDB = db.promise();
 
 exports.clientList = (callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, COALESCE(clients.ClientName, login_users.UserName) AS ClientName, CASE WHEN clients.ClientType IS NOT NULL THEN 'Complete' ELSE 'Pending' END AS OnboardingStatus, COALESCE(clients.SubscriptionPlanStatus, 'Not Assigned') AS PaymentStatus, COALESCE(( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ), 0) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID WHERE login_users.Status = 1 AND login_users.RoleId = 2 GROUP BY login_users.UserID`,
+    `SELECT clients.*, login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, COALESCE(clients.ClientName, login_users.UserName) AS ClientName, CASE WHEN clients.ClientType IS NOT NULL THEN 'Complete' ELSE 'Pending' END AS OnboardingStatus, COALESCE(clients.SubscriptionPlanStatus, 'Not Assigned') AS PaymentStatus, COALESCE(( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ), 0) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID WHERE login_users.Status = 1 AND login_users.RoleId = 2 GROUP BY login_users.UserID`,
     (error, results) => {
       if (error) {
         return callBack(error.message);
@@ -15,7 +15,7 @@ exports.clientList = (callBack) => {
 
 exports.clientListDesc = async () => {
   const [rows] = await promiseDB.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, COALESCE(clients.ClientName, login_users.UserName) AS ClientName, CASE WHEN clients.ClientType IS NOT NULL THEN 'Complete' ELSE 'Pending' END AS OnboardingStatus, COALESCE(clients.SubscriptionPlanStatus, 'Not Assigned') AS PaymentStatus, COALESCE(( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ), 0) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID WHERE login_users.Status = 1 AND login_users.RoleId = 2 GROUP BY login_users.UserID ORDER BY login_users.Create_TS DESC LIMIT 5;`
+    `SELECT clients.*, login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, COALESCE(clients.ClientName, login_users.UserName) AS ClientName, CASE WHEN clients.ClientType IS NOT NULL THEN 'Complete' ELSE 'Pending' END AS OnboardingStatus, COALESCE(clients.SubscriptionPlanStatus, 'Not Assigned') AS PaymentStatus, COALESCE(( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ), 0) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID WHERE login_users.Status = 1 AND login_users.RoleId = 2 GROUP BY login_users.UserID ORDER BY login_users.Create_TS DESC LIMIT 5;`
   );
   return rows;
 };
@@ -34,7 +34,7 @@ exports.clientDetails = (ClientID, callBack) => {
 
 exports.clientDetailsByUserID = (data, callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, subscription_plans.PlanName FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN subscription_plans ON subscription_plans.SubscriptionPlanID = clients.SubscriptionPlanId WHERE login_users.UserID = ?`,
+    `SELECT clients.*, subscription_plans.PlanName, login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN subscription_plans ON subscription_plans.SubscriptionPlanID = clients.SubscriptionPlanId WHERE login_users.UserID = ?`,
     // `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, subscription_plans.PlanName FROM login_users INNER JOIN clients ON login_users.UserID = clients.UserID INNER JOIN subscription_plans ON subscription_plans.SubscriptionPlanID = clients.SubscriptionPlanId WHERE clients.ClientID = ? AND clients.UserID = ?`,
     [data.UserID],
     // [data.ClientID, data.UserID],
@@ -48,7 +48,7 @@ exports.clientDetailsByUserID = (data, callBack) => {
 
 exports.clientSearch = (data, callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, clients.*, COALESCE(clients.ClientName, login_users.UserName) AS ClientName, CASE WHEN clients.ClientType IS NOT NULL THEN 'Complete' ELSE 'Pending' END AS OnboardingStatus, COALESCE(clients.SubscriptionPlanStatus, 'Not Assigned') AS PaymentStatus FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID WHERE (clients.ClientName LIKE '%${data.ClientName}%' OR login_users.UserName LIKE '%${data.ClientName}%') AND login_users.EmailId LIKE '%${data.EmailId}%' AND login_users.Status = 1 AND login_users.RoleId = 2`,
+    `SELECT clients.*, login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, COALESCE(clients.ClientName, login_users.UserName) AS ClientName, CASE WHEN clients.ClientType IS NOT NULL THEN 'Complete' ELSE 'Pending' END AS OnboardingStatus, COALESCE(clients.SubscriptionPlanStatus, 'Not Assigned') AS PaymentStatus FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID WHERE (clients.ClientName LIKE '%${data.ClientName}%' OR login_users.UserName LIKE '%${data.ClientName}%') AND login_users.EmailId LIKE '%${data.EmailId}%' AND login_users.Status = 1 AND login_users.RoleId = 2`,
     (error, results) => {
       if (error) {
         return callBack(error.message);
@@ -514,14 +514,40 @@ exports.clientHardDelete = ({ ClientID }, callBack) => {
   });
 };
 
-exports.deleteUnonboardedClient = (UserID, callBack) => {
+exports.assignSubscriptionByUserID = (data, callBack) => {
   db.query(
-    `DELETE FROM login_users WHERE UserID = ? AND RoleId = 2 AND UserID NOT IN (SELECT UserID FROM clients)`,
-    [UserID],
+    `INSERT INTO clients (UserID, ClientName, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanId, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
+     VALUES (?, ?, '', '', ?, 'Payment Success', ?, ?)
+     ON DUPLICATE KEY UPDATE
+       SubscriptionPlanId = VALUES(SubscriptionPlanId),
+       SubscriptionPlanStatus = VALUES(SubscriptionPlanStatus),
+       SubscriptionPlanActivatedDate = VALUES(SubscriptionPlanActivatedDate),
+       SubcriptionPlanEndDate = VALUES(SubcriptionPlanEndDate)`,
+    [data.UserID, data.ClientName, data.SubscriptionPlanId, data.activatedDate, data.endDate],
     (error, result) => {
       if (error) return callBack(error.message);
-      if (result.affectedRows < 1) return callBack("Client not found or already has a profile row", null, 404);
-      return callBack(null, "Client deleted successfully");
+      if (result.affectedRows < 1) return callBack("Failed to assign subscription");
+      return callBack(null, "Subscription assigned successfully");
+    }
+  );
+};
+
+exports.deleteUnonboardedClient = (UserID, callBack) => {
+  db.query(
+    `SELECT UserID FROM clients WHERE UserID = ?`,
+    [UserID],
+    (error, rows) => {
+      if (error) return callBack(error.message);
+      if (rows.length > 0) return callBack("Client has an existing profile — use the standard delete", null, 400);
+      db.query(
+        `DELETE FROM login_users WHERE UserID = ? AND RoleId = 2`,
+        [UserID],
+        (error, result) => {
+          if (error) return callBack(error.message);
+          if (result.affectedRows < 1) return callBack("Client not found", null, 404);
+          return callBack(null, "Client deleted successfully");
+        }
+      );
     }
   );
 };

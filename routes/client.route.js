@@ -9,6 +9,7 @@ const {
   clientDelete,
   clientPermanentDelete,
   deleteUnonboarded,
+  assignSubscription,
   clientSearch,
   activateClientSubscription,
 } = require("../controllers/client.controller");
@@ -896,6 +897,12 @@ router.delete(
   "/user/:UserID",
   pageAuthorisation(["SuperAdmin"]),
   deleteUnonboarded
+);
+
+router.post(
+  "/user/:UserID/assign-subscription",
+  pageAuthorisation(["SuperAdmin"]),
+  assignSubscription
 );
 
 module.exports = router;
