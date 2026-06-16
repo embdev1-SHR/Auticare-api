@@ -237,7 +237,6 @@ router.post(
     body("ImageURL1").isURL().withMessage("Value must be a url").optional({ checkFalsy: true }),
     body("ImageURL2").isURL().withMessage("Value must be a url").optional({ checkFalsy: true }),
     body("ImageURL3").isURL().withMessage("Value must be a url").optional({ checkFalsy: true }),
-    body("BuyURL").isURL().withMessage("Value must be a url").optional({ checkFalsy: true }),
   ],
   validateRequestSchema,
   productCreate
@@ -374,7 +373,6 @@ router.put(
     body("ImageURL1").optional({ checkFalsy: true }).trim(),
     body("ImageURL2").optional({ checkFalsy: true }).trim(),
     body("ImageURL3").optional({ checkFalsy: true }).trim(),
-    body("BuyURL").optional({ checkFalsy: true }).trim(),
     body("Status").isIn([0, 1, "0", "1", true, false, "true", "false"]).withMessage("Value must be 0 or 1"),
   ],
   validateRequestSchema,
