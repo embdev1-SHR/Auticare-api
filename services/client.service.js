@@ -367,39 +367,52 @@ exports.clientOnboardByUserID = (data, callBack) => {
     if (error) return callBack(error.message);
     connection.beginTransaction((error) => {
       if (error) return callBack(error.message);
+      // Update contact/address fields on login_users
       connection.query(
         `UPDATE login_users SET Phone = ?, AddressLine1 = ?, AddressLine2 = ?, City = ?, Pincode = ?, State = ?, Country = ? WHERE UserID = ?`,
         [data.Phone, data.AddressLine1, data.AddressLine2, data.City, data.Pincode, data.State, data.Country, data.UserID],
         (error) => {
           if (error) return connection.rollback(() => { connection.release(); callBack(error.message); });
+          // Check whether a clients row already exists (created by assignSubscriptionByUserID)
           connection.query(
-            `INSERT INTO clients (UserID, ClientName, ClientLogo, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
-             VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', 'Pending Setup', NOW(), NOW())
-             ON DUPLICATE KEY UPDATE
-               ClientName = VALUES(ClientName), WebsiteURL = VALUES(WebsiteURL), ClientType = VALUES(ClientType),
-               OrganizationType = VALUES(OrganizationType), ContactPersonName = VALUES(ContactPersonName),
-               ContactPersonDesignation = VALUES(ContactPersonDesignation), ContactEmailId = VALUES(ContactEmailId),
-               BillingAddressLine1 = VALUES(BillingAddressLine1), BillingAddressLine2 = VALUES(BillingAddressLine2),
-               BillingCity = VALUES(BillingCity), BillingDistrict = VALUES(BillingDistrict),
-               BillingPincode = VALUES(BillingPincode), BillingState = VALUES(BillingState),
-               BillingCountry = VALUES(BillingCountry), GSTNumber = VALUES(GSTNumber),
-               Bank = VALUES(Bank), BankAccountNumber = VALUES(BankAccountNumber),
-               Branch = VALUES(Branch), IFSCCode = VALUES(IFSCCode)`,
-            [
-              data.UserID, data.ClientName, data.WebsiteURL || null, data.ClientType, data.OrganizationType || null,
-              data.ContactPersonName, data.ContactPersonDesignation || null, data.ContactEmailId || null,
-              data.BillingAddressLine1 || "", data.BillingAddressLine2 || "", data.BillingCity || "",
-              data.BillingDistrict || "", data.BillingPincode || "", data.BillingState || "",
-              data.BillingCountry || "", data.GSTNumber || "",
-              data.Bank || null, data.BankAccountNumber || null, data.Branch || null, data.IFSCCode || null,
-            ],
-            (error, result) => {
+            `SELECT ClientID FROM clients WHERE UserID = ? LIMIT 1`,
+            [data.UserID],
+            (error, rows) => {
               if (error) return connection.rollback(() => { connection.release(); callBack(error.message); });
-              connection.commit((error) => {
-                connection.release();
-                if (error) return callBack(error.message);
-                return callBack(null, "Onboarding completed successfully");
-              });
+              if (!rows.length) {
+                // No subscription has been assigned yet — SubscriptionPlanId is NOT NULL so we cannot INSERT.
+                return connection.rollback(() => {
+                  connection.release();
+                  callBack("A subscription plan must be assigned by your administrator before you can complete setup.");
+                });
+              }
+              // Row exists — UPDATE profile fields only, preserve all subscription columns.
+              connection.query(
+                `UPDATE clients SET
+                   ClientName = ?, ClientLogo = '', WebsiteURL = ?, ClientType = ?, OrganizationType = ?,
+                   ContactPersonName = ?, ContactPersonDesignation = ?, ContactEmailId = ?,
+                   BillingAddressLine1 = ?, BillingAddressLine2 = ?, BillingCity = ?, BillingDistrict = ?,
+                   BillingPincode = ?, BillingState = ?, BillingCountry = ?, GSTNumber = ?,
+                   Bank = ?, BankAccountNumber = ?, Branch = ?, IFSCCode = ?
+                 WHERE UserID = ?`,
+                [
+                  data.ClientName, data.WebsiteURL || null, data.ClientType, data.OrganizationType || null,
+                  data.ContactPersonName, data.ContactPersonDesignation || null, data.ContactEmailId || null,
+                  data.BillingAddressLine1 || "", data.BillingAddressLine2 || "", data.BillingCity || "",
+                  data.BillingDistrict || "", data.BillingPincode || "", data.BillingState || "",
+                  data.BillingCountry || "", data.GSTNumber || "",
+                  data.Bank || null, data.BankAccountNumber || null, data.Branch || null, data.IFSCCode || null,
+                  data.UserID,
+                ],
+                (error) => {
+                  if (error) return connection.rollback(() => { connection.release(); callBack(error.message); });
+                  connection.commit((error) => {
+                    connection.release();
+                    if (error) return callBack(error.message);
+                    return callBack(null, "Onboarding completed successfully");
+                  });
+                }
+              );
             }
           );
         }
