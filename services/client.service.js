@@ -388,9 +388,9 @@ exports.clientOnboardByUserID = (data, callBack) => {
             [
               data.UserID, data.ClientName, data.WebsiteURL || null, data.ClientType, data.OrganizationType || null,
               data.ContactPersonName, data.ContactPersonDesignation || null, data.ContactEmailId || null,
-              data.BillingAddressLine1 || null, data.BillingAddressLine2 || null, data.BillingCity || null,
-              data.BillingDistrict || null, data.BillingPincode || null, data.BillingState || null,
-              data.BillingCountry || null, data.GSTNumber || null,
+              data.BillingAddressLine1 || "", data.BillingAddressLine2 || "", data.BillingCity || "",
+              data.BillingDistrict || "", data.BillingPincode || "", data.BillingState || "",
+              data.BillingCountry || "", data.GSTNumber || "",
               data.Bank || null, data.BankAccountNumber || null, data.Branch || null, data.IFSCCode || null,
             ],
             (error, result) => {
