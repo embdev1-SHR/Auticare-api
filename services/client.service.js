@@ -542,11 +542,11 @@ exports.assignSubscriptionByUserID = (data, callBack) => {
         }
       );
     } else {
-      // No clients row yet (unonboarded client). Mirror clientOnboardByUserID column list
-      // and use empty strings for VARCHAR fields to satisfy any NOT NULL constraints.
+      // No clients row yet (unonboarded client). Mirror clientCreate column list
+      // and use empty strings for VARCHAR fields to satisfy NOT NULL constraints.
       db.query(
-        `INSERT INTO clients (UserID, ClientName, ClientLogo, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanId, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
-         VALUES (?, ?, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ?, 'Payment Success', ?, ?)`,
+        `INSERT INTO clients (UserID, ClientName, ClientLogo, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode, IncorporationCertificateURL, RegistrationCertificateURL, PaymentId, SubscriptionPlanId, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
+         VALUES (?, ?, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ?, 'Payment Success', ?, ?)`,
         [data.UserID, data.ClientName, data.SubscriptionPlanId, data.activatedDate, data.endDate],
         (error, result) => {
           if (error) return callBack(error.message);
