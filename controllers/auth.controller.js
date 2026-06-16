@@ -339,6 +339,26 @@ exports.resetPassword = (req, res) => {
   });
 };
 
+exports.changePassword = (req, res) => {
+  const userID = req.userData.UserID;
+  const { CurrentPassword, NewPassword } = req.body;
+  getUserByUserId(userID, (error, results) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    if (!results.length) return res.status(404).send({ success: false, errors: { message: "User not found" } });
+    compare(CurrentPassword, results[0].Password, (err, isMatch) => {
+      if (err) return res.status(500).send({ success: false, errors: { message: err.message } });
+      if (!isMatch) return res.status(400).send({ success: false, errors: { message: "Current password is incorrect" } });
+      hash(NewPassword, 10, (hashErr, hashed) => {
+        if (hashErr) return res.status(500).send({ success: false, errors: { message: hashErr.message } });
+        updateUserPasswordByUserID({ UserID: userID, Password: hashed }, (updateErr, result, status) => {
+          if (updateErr) return res.status(status || 500).send({ success: false, errors: { message: updateErr } });
+          return res.status(200).send({ success: true, results: { message: "Password changed successfully" } });
+        });
+      });
+    });
+  });
+};
+
 exports.getPendingCentersList = (req, res) => {
   getPendingCenters((error, results) => {
     if (error) {

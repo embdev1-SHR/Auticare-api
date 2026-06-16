@@ -1,5 +1,7 @@
 const router = require("express").Router();
-const { userDetails } = require("../controllers/user.controller");
+const { userDetails, updateProfile } = require("../controllers/user.controller");
+const { body } = require("express-validator");
+const { validateRequestSchema } = require("../middleware/validateRequestSchema");
 const { pageAuthorisation } = require("../middleware/authorization");
 
 /**
@@ -130,6 +132,14 @@ const { pageAuthorisation } = require("../middleware/authorization");
  */
 
 router.get("/details", pageAuthorisation(["SuperAdmin", "Admin", "ClientAdmin", "Center", "Therapist"]), userDetails);
+
+router.put(
+  "/profile",
+  pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center", "Therapist"]),
+  [body("UserName").not().isEmpty().withMessage("Name is required").trim()],
+  validateRequestSchema,
+  updateProfile
+);
 
 module.exports = router;
 

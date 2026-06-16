@@ -332,6 +332,18 @@ exports.createSuperAdmin = (data, callBack) => {
   );
 };
 
+exports.updateUserProfile = (data, callBack) => {
+  db.query(
+    `UPDATE login_users SET UserName = ?, Phone = ? WHERE UserID = ?`,
+    [data.UserName, data.Phone || null, data.UserID],
+    (error, results) => {
+      if (error) return callBack(error.message);
+      if (results.affectedRows === 1) return callBack(null, "Profile updated successfully");
+      return callBack("User not found", null, 404);
+    }
+  );
+};
+
 exports.deleteAllRefreshToken = (UserID, callBack) => {
   db.query(
     `DELETE FROM refresh_tokens WHERE UserID = ?`,

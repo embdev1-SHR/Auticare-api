@@ -17,6 +17,7 @@ const {
   approvePendingClient,
   rejectPendingClientRegistration,
   setupSuperAdmin,
+  changePassword,
 } = require("../controllers/auth.controller");
 const { pageAuthorisation } = require("../middleware/authorization");
 const { verifyConfirmOtpToken, verifyAccessToken } = require("../middleware/authentication");
@@ -480,6 +481,18 @@ router.post(
   ],
   validateRequestSchema,
   clientSignup
+);
+
+router.put(
+  "/change-password",
+  verifyAccessToken,
+  pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center", "Therapist"]),
+  [
+    body("CurrentPassword").not().isEmpty().withMessage("Current password is required"),
+    body("NewPassword").isLength({ min: 6 }).withMessage("New password must be at least 6 characters"),
+  ],
+  validateRequestSchema,
+  changePassword
 );
 
 router.post(

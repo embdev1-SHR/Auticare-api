@@ -1,5 +1,18 @@
 const { moduleRoleBasedList } = require("../services/module.service");
 const { subscriptionPlanDetailsByUserID } = require("../services/subscriptionPlan.service");
+const { updateUserProfile } = require("../services/users.service");
+
+exports.updateProfile = (req, res) => {
+  const data = {
+    UserID: req.userData.UserID,
+    UserName: req.body.UserName,
+    Phone: req.body.Phone,
+  };
+  updateUserProfile(data, (error, result, status) => {
+    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true, results: { message: result } });
+  });
+};
 
 exports.userDetails = (req, res) => {
   const data = {
