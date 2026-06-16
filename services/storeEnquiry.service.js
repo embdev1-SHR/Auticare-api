@@ -39,6 +39,22 @@ exports.storeEnquiryCreate = (data, callBack) => {
   );
 };
 
+exports.storeEnquiryDelete = (StoreEnquiryID, callBack) => {
+  db.query(
+    `DELETE FROM store_enquiries WHERE StoreEnquiryID = ?`,
+    [StoreEnquiryID],
+    (error, results) => {
+      if (error) {
+        return callBack(error.message);
+      } else if (results.affectedRows === 1) {
+        return callBack(null, "Store enquiry deleted successfully");
+      } else {
+        return callBack("Store enquiry not found", null, 404);
+      }
+    }
+  );
+};
+
 exports.storeEnquiryUpdate = (data, callBack) => {
   db.query(
     `UPDATE store_enquiries SET IsAdminViewed = ?, Status = ?, Update_By = ? WHERE StoreEnquiryID = ? `,

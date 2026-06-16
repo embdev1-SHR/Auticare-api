@@ -5,6 +5,7 @@ const {
   storeEnquiryDetails,
   storeEnquiryCreate,
   storeEnquiryUpdate,
+  storeEnquiryDelete,
 } = require("../controllers/storeEnquiry.controller");
 
 const { pageAuthorisation } = require("../middleware/authorization");
@@ -308,6 +309,12 @@ router.put(
   ],
   validateRequestSchema,
   storeEnquiryUpdate
+);
+
+router.delete(
+  "/:StoreEnquiryID",
+  pageAuthorisation(["SuperAdmin"]),
+  storeEnquiryDelete
 );
 
 module.exports = router;
