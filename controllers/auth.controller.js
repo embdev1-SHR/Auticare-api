@@ -24,6 +24,8 @@ const {
   getPendingCenters,
   createPendingClient,
   getPendingClients,
+  superAdminExists,
+  createSuperAdmin,
 } = require("../services/users.service");
 const { centerCreateFromPending, rejectPendingCenter } = require("../services/center.service");
 const { clientCreateFromPending, rejectPendingClient } = require("../services/client.service");
@@ -511,6 +513,21 @@ exports.centerSignup = (req, res) => {
           success: true,
           results: { message: "Registration submitted. An admin will review and activate your account." },
         });
+      });
+    });
+  });
+};
+
+exports.setupSuperAdmin = (req, res) => {
+  const { EmailId, UserName, Password } = req.body;
+  superAdminExists((error, exists) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    if (exists) return res.status(403).send({ success: false, errors: { message: "A super admin account already exists. Use the login page." } });
+    hash(Password, 10, (error, hashedPassword) => {
+      if (error) return res.status(500).send({ success: false, errors: { message: error.message } });
+      createSuperAdmin({ EmailId, UserName: UserName || EmailId, Password: hashedPassword }, (error, result) => {
+        if (error) return res.status(500).send({ success: false, errors: { message: error } });
+        return res.status(201).send({ success: true, results: { message: result } });
       });
     });
   });

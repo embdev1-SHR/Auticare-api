@@ -306,6 +306,32 @@ exports.createPendingCenter = (data, callBack) => {
   );
 };
 
+exports.superAdminExists = (callBack) => {
+  db.query(
+    `SELECT UserID FROM login_users
+     INNER JOIN roles ON login_users.RoleId = roles.RoleID
+     WHERE roles.RoleName = 'SuperAdmin' AND login_users.Status = 1
+     LIMIT 1`,
+    (error, results) => {
+      if (error) return callBack(error.message);
+      return callBack(null, results.length > 0);
+    }
+  );
+};
+
+exports.createSuperAdmin = (data, callBack) => {
+  db.query(
+    `INSERT INTO login_users (EmailId, UserName, Password, RoleId, Status, Create_By)
+     VALUES (?, ?, ?, (SELECT RoleID FROM roles WHERE RoleName = 'SuperAdmin' LIMIT 1), 1, 0)`,
+    [data.EmailId, data.UserName, data.Password],
+    (error, results) => {
+      if (error) return callBack(error.message);
+      if (results.affectedRows === 1) return callBack(null, "Super admin created successfully");
+      return callBack("Failed to create super admin");
+    }
+  );
+};
+
 exports.deleteAllRefreshToken = (UserID, callBack) => {
   db.query(
     `DELETE FROM refresh_tokens WHERE UserID = ?`,

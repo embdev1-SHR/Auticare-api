@@ -16,6 +16,7 @@ const {
   getPendingClientsList,
   approvePendingClient,
   rejectPendingClientRegistration,
+  setupSuperAdmin,
 } = require("../controllers/auth.controller");
 const { pageAuthorisation } = require("../middleware/authorization");
 const { verifyConfirmOtpToken, verifyAccessToken } = require("../middleware/authentication");
@@ -479,6 +480,17 @@ router.post(
   ],
   validateRequestSchema,
   clientSignup
+);
+
+router.post(
+  "/setup-admin",
+  [
+    body("EmailId").isEmail().withMessage("Valid email is required").normalizeEmail(),
+    body("Password").isLength({ min: 8 }).withMessage("Password must be at least 8 characters"),
+    body("UserName").not().isEmpty().withMessage("Name is required").trim(),
+  ],
+  validateRequestSchema,
+  setupSuperAdmin
 );
 
 module.exports = router;
