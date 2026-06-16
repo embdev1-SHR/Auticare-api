@@ -515,21 +515,31 @@ exports.clientHardDelete = ({ ClientID }, callBack) => {
 };
 
 exports.assignSubscriptionByUserID = (data, callBack) => {
-  db.query(
-    `INSERT INTO clients (UserID, ClientName, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanId, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
-     VALUES (?, ?, '', '', ?, 'Payment Success', ?, ?)
-     ON DUPLICATE KEY UPDATE
-       SubscriptionPlanId = VALUES(SubscriptionPlanId),
-       SubscriptionPlanStatus = VALUES(SubscriptionPlanStatus),
-       SubscriptionPlanActivatedDate = VALUES(SubscriptionPlanActivatedDate),
-       SubcriptionPlanEndDate = VALUES(SubcriptionPlanEndDate)`,
-    [data.UserID, data.ClientName, data.SubscriptionPlanId, data.activatedDate, data.endDate],
-    (error, result) => {
-      if (error) return callBack(error.message);
-      if (result.affectedRows < 1) return callBack("Failed to assign subscription");
-      return callBack(null, "Subscription assigned successfully");
+  db.query(`SELECT ClientID FROM clients WHERE UserID = ?`, [data.UserID], (err, rows) => {
+    if (err) return callBack(err.message);
+    if (rows.length > 0) {
+      db.query(
+        `UPDATE clients SET SubscriptionPlanId = ?, SubscriptionPlanStatus = 'Payment Success', SubscriptionPlanActivatedDate = ?, SubcriptionPlanEndDate = ? WHERE UserID = ?`,
+        [data.SubscriptionPlanId, data.activatedDate, data.endDate, data.UserID],
+        (error, result) => {
+          if (error) return callBack(error.message);
+          if (result.affectedRows < 1) return callBack("Failed to assign subscription");
+          return callBack(null, "Subscription assigned successfully");
+        }
+      );
+    } else {
+      db.query(
+        `INSERT INTO clients (UserID, ClientName, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanId, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
+         VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL, '', '', ?, 'Payment Success', ?, ?)`,
+        [data.UserID, data.ClientName, data.SubscriptionPlanId, data.activatedDate, data.endDate],
+        (error, result) => {
+          if (error) return callBack(error.message);
+          if (result.affectedRows < 1) return callBack("Failed to assign subscription");
+          return callBack(null, "Subscription assigned successfully");
+        }
+      );
     }
-  );
+  });
 };
 
 exports.deleteUnonboardedClient = (UserID, callBack) => {
