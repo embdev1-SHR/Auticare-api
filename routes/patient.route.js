@@ -1643,7 +1643,7 @@ router.post(
     body("ParentEmailID").isEmail().normalizeEmail(),
     body("ParentPhone").not().isEmpty().withMessage("Field is required"),
     body("Relationship").not().isEmpty().withMessage("Field is required").trim(),
-    body("IssueList").isArray().not().isEmpty().withMessage("Value must be an array").optional({ checkFalsy: true }),
+    body("IssueList").optional({ nullable: true }).isArray().withMessage("Value must be an array"),
     body("PreviousTreatmentHistoryDescription").trim().optional({ checkFalsy: true }),
     body("PreviousTreatmentHistoryURL").isURL().withMessage("Value must be a url").optional({ checkFalsy: true }),
     body("DocumentsURL").isURL().withMessage("Value must be a url").optional({ checkFalsy: true }),
@@ -2709,13 +2709,8 @@ router.put(
     body("ParentName").not().isEmpty().withMessage("Field is required").trim(),
     body("ParentPhone").not().isEmpty().withMessage("Field is required"),
     body("Relationship").not().isEmpty().withMessage("Field is required").trim(),
-    body("AddIssueList").isArray().not().isEmpty().withMessage("Value must be an array").optional({ checkFalsy: true }),
-    body("RemoveIssueListID")
-      .isArray()
-      .not()
-      .isEmpty()
-      .withMessage("Value must be an array")
-      .optional({ checkFalsy: true }),
+    body("AddIssueList").optional({ nullable: true }).isArray().withMessage("Value must be an array"),
+    body("RemoveIssueListID").optional({ nullable: true }).isArray().withMessage("Value must be an array"),
     body("PreviousTreatmentHistoryDescription").trim().optional({ checkFalsy: true }),
     body("PreviousTreatmentHistoryURL").isURL().withMessage("Value must be a url").optional({ checkFalsy: true }),
     body("DocumentsURL").isURL().withMessage("Value must be a url").optional({ checkFalsy: true }),
