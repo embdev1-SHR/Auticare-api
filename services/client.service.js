@@ -518,23 +518,26 @@ exports.assignSubscriptionByUserID = (data, callBack) => {
   db.query(`SELECT ClientID FROM clients WHERE UserID = ?`, [data.UserID], (err, rows) => {
     if (err) return callBack(err.message);
     if (rows.length > 0) {
+      // Client row exists — update subscription fields only.
+      // Do not check affectedRows: MySQL returns 0 when values are unchanged, which is still a success.
       db.query(
         `UPDATE clients SET SubscriptionPlanId = ?, SubscriptionPlanStatus = 'Payment Success', SubscriptionPlanActivatedDate = ?, SubcriptionPlanEndDate = ? WHERE UserID = ?`,
         [data.SubscriptionPlanId, data.activatedDate, data.endDate, data.UserID],
-        (error, result) => {
+        (error) => {
           if (error) return callBack(error.message);
-          if (result.affectedRows < 1) return callBack("Failed to assign subscription");
           return callBack(null, "Subscription assigned successfully");
         }
       );
     } else {
+      // No clients row yet (unonboarded client). Mirror clientOnboardByUserID column list
+      // and use empty strings for VARCHAR fields to satisfy any NOT NULL constraints.
       db.query(
-        `INSERT INTO clients (UserID, ClientName, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanId, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
-         VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL, '', '', ?, 'Payment Success', ?, ?)`,
+        `INSERT INTO clients (UserID, ClientName, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanId, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
+         VALUES (?, ?, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ?, 'Payment Success', ?, ?)`,
         [data.UserID, data.ClientName, data.SubscriptionPlanId, data.activatedDate, data.endDate],
         (error, result) => {
           if (error) return callBack(error.message);
-          if (result.affectedRows < 1) return callBack("Failed to assign subscription");
+          if (result.affectedRows < 1) return callBack("Failed to create client record for subscription");
           return callBack(null, "Subscription assigned successfully");
         }
       );
