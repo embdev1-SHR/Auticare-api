@@ -3,6 +3,7 @@ const {
   subscriptionPlanDetails,
   subscriptionPlanCreate,
   subscriptionPlanUpdate,
+  subscriptionPlanDelete,
 } = require("../services/subscriptionPlan.service");
 
 exports.subscriptionPlanList = (req, res) => {
@@ -51,6 +52,22 @@ exports.subscriptionPlanCreate = (req, res) => {
         .send({ success: false, errors: { message: error } });
     }
     return res.status(201).send({
+      success: true,
+      results: { message: results },
+    });
+  });
+};
+
+exports.subscriptionPlanDelete = (req, res) => {
+  const SubscriptionPlanID = req.params.SubscriptionPlanId;
+  subscriptionPlanDelete(SubscriptionPlanID, (error, results, status) => {
+    if (error) {
+      console.log(error);
+      return res
+        .status(status || 500)
+        .send({ success: false, errors: { message: error } });
+    }
+    return res.status(200).send({
       success: true,
       results: { message: results },
     });

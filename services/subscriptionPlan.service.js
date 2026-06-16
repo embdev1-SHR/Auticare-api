@@ -56,6 +56,18 @@ exports.subscriptionPlanCreate = (data, callBack) => {
   );
 };
 
+exports.subscriptionPlanDelete = (SubscriptionPlanID, callBack) => {
+  db.query(
+    `DELETE FROM subscription_plans WHERE SubscriptionPlanID = ?`,
+    [SubscriptionPlanID],
+    (error, results) => {
+      if (error) return callBack(error.message);
+      if (results.affectedRows === 1) return callBack(null, "Subscription plan deleted successfully");
+      return callBack("Subscription plan not found", null, 404);
+    }
+  );
+};
+
 exports.subscriptionPlanUpdate = (data, callBack) => {
   db.query(
     `UPDATE subscription_plans SET PlanName = ?, Contents = ?, Frequency = ?, NumberOfPlanActiveDays = ?, NumberofTherapists = ?, NumberofPatients = ?, NumberofCustomScales = ?, NumberofCustomSkills = ?, NumberofCustomAssessment = ?, NumberofCustomContents = ?, Price = ?, OnetimeFee = ?, PlanType = ?, Status = ?, Update_By = ? WHERE SubscriptionPlanID = ? `,

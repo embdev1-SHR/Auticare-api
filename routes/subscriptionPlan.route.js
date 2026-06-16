@@ -5,6 +5,7 @@ const {
   subscriptionPlanDetails,
   subscriptionPlanCreate,
   subscriptionPlanUpdate,
+  subscriptionPlanDelete,
 } = require("../controllers/subscriptionPlan.controller");
 
 const { pageAuthorisation } = require("../middleware/authorization");
@@ -465,6 +466,12 @@ router.put(
   ],
   validateRequestSchema,
   subscriptionPlanUpdate
+);
+
+router.delete(
+  "/:SubscriptionPlanId",
+  pageAuthorisation(["SuperAdmin"]),
+  subscriptionPlanDelete
 );
 
 module.exports = router;
