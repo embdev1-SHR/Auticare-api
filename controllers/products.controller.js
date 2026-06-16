@@ -1,4 +1,4 @@
-const { productList, productDetails, productCreate, productUpdate } = require("../services/products.service");
+const { productList, productDetails, productCreate, productUpdate, productDelete, productBulkCreate } = require("../services/products.service");
 
 exports.productList = (req, res) => {
   productList((error, results) => {
@@ -26,6 +26,24 @@ exports.productDetails = (req, res) => {
       success: true,
       results: { data: results },
     });
+  });
+};
+
+exports.productDelete = (req, res) => {
+  productDelete(req.params.ProductID, req.userData.UserID, (error, result, status) => {
+    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true, results: { message: result } });
+  });
+};
+
+exports.productBulkCreate = (req, res) => {
+  const products = req.body.products;
+  if (!Array.isArray(products) || products.length === 0) {
+    return res.status(400).send({ success: false, errors: { message: "products array is required" } });
+  }
+  productBulkCreate(products, req.userData.UserID, (error, result) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    return res.status(201).send({ success: true, results: { message: result } });
   });
 };
 

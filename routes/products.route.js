@@ -1,6 +1,6 @@
 const router = require("express").Router();
 const { body } = require("express-validator");
-const { productList, productDetails, productCreate, productUpdate } = require("../controllers/products.controller");
+const { productList, productDetails, productCreate, productUpdate, productDelete, productBulkCreate } = require("../controllers/products.controller");
 
 const { pageAuthorisation } = require("../middleware/authorization");
 const { validateRequestSchema } = require("../middleware/validateRequestSchema");
@@ -218,6 +218,12 @@ router.get("/:ProductID", pageAuthorisation(["SuperAdmin", "ClientAdmin", "Cente
  *           description: Internal server error
  */
 router.post(
+  "/bulk",
+  pageAuthorisation(["SuperAdmin"]),
+  productBulkCreate
+);
+
+router.post(
   "/",
   pageAuthorisation(["SuperAdmin"]),
   [
@@ -231,6 +237,7 @@ router.post(
     body("ImageURL1").isURL().withMessage("Value must be a url").optional({ checkFalsy: true }),
     body("ImageURL2").isURL().withMessage("Value must be a url").optional({ checkFalsy: true }),
     body("ImageURL3").isURL().withMessage("Value must be a url").optional({ checkFalsy: true }),
+    body("BuyURL").isURL().withMessage("Value must be a url").optional({ checkFalsy: true }),
   ],
   validateRequestSchema,
   productCreate
@@ -351,6 +358,8 @@ router.post(
  *         "500":
  *           description: Internal server error
  */
+router.delete("/:ProductID", pageAuthorisation(["SuperAdmin"]), productDelete);
+
 router.put(
   "/:ProductID",
   pageAuthorisation(["SuperAdmin"]),
@@ -362,10 +371,11 @@ router.put(
     body("Highlights").not().isEmpty().withMessage("Field is required").trim(),
     body("ProductDescription").not().isEmpty().withMessage("Field is required").trim(),
     body("ImageURL").not().isEmpty().withMessage("Field is required").trim(),
-    body("ImageURL1").not().isEmpty().withMessage("Field is required").trim().optional({ checkFalsy: true }),
-    body("ImageURL2").not().isEmpty().withMessage("Field is required").trim().optional({ checkFalsy: true }),
-    body("ImageURL3").not().isEmpty().withMessage("Field is required").trim().optional({ checkFalsy: true }),
-    body("Status").isBoolean().withMessage("Value must be boolean").trim(),
+    body("ImageURL1").optional({ checkFalsy: true }).trim(),
+    body("ImageURL2").optional({ checkFalsy: true }).trim(),
+    body("ImageURL3").optional({ checkFalsy: true }).trim(),
+    body("BuyURL").optional({ checkFalsy: true }).trim(),
+    body("Status").isIn([0, 1, "0", "1", true, false, "true", "false"]).withMessage("Value must be 0 or 1"),
   ],
   validateRequestSchema,
   productUpdate
