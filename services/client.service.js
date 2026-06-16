@@ -373,8 +373,8 @@ exports.clientOnboardByUserID = (data, callBack) => {
         (error) => {
           if (error) return connection.rollback(() => { connection.release(); callBack(error.message); });
           connection.query(
-            `INSERT INTO clients (UserID, ClientName, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', 'Pending Setup', NOW(), NOW())
+            `INSERT INTO clients (UserID, ClientName, ClientLogo, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
+             VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', 'Pending Setup', NOW(), NOW())
              ON DUPLICATE KEY UPDATE
                ClientName = VALUES(ClientName), WebsiteURL = VALUES(WebsiteURL), ClientType = VALUES(ClientType),
                OrganizationType = VALUES(OrganizationType), ContactPersonName = VALUES(ContactPersonName),
@@ -532,8 +532,8 @@ exports.assignSubscriptionByUserID = (data, callBack) => {
       // No clients row yet (unonboarded client). Mirror clientOnboardByUserID column list
       // and use empty strings for VARCHAR fields to satisfy any NOT NULL constraints.
       db.query(
-        `INSERT INTO clients (UserID, ClientName, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanId, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
-         VALUES (?, ?, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ?, 'Payment Success', ?, ?)`,
+        `INSERT INTO clients (UserID, ClientName, ClientLogo, WebsiteURL, ClientType, OrganizationType, ContactPersonName, ContactPersonDesignation, ContactEmailId, BillingAddressLine1, BillingAddressLine2, BillingCity, BillingDistrict, BillingPincode, BillingState, BillingCountry, GSTNumber, Bank, BankAccountNumber, Branch, IFSCCode, IncorporationCertificateURL, RegistrationCertificateURL, SubscriptionPlanId, SubscriptionPlanStatus, SubscriptionPlanActivatedDate, SubcriptionPlanEndDate)
+         VALUES (?, ?, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ?, 'Payment Success', ?, ?)`,
         [data.UserID, data.ClientName, data.SubscriptionPlanId, data.activatedDate, data.endDate],
         (error, result) => {
           if (error) return callBack(error.message);
