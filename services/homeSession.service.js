@@ -72,6 +72,17 @@ exports.homeSessionUpdate = (data, callBack) => {
   );
 };
 
+exports.homeSessionGetByID = (HomeSessionID, callBack) => {
+  db.query(
+    `SELECT HomeSessionID, ResourceTitle, ResourceDescription, ResourceType, ResourceURL FROM home_sessions WHERE HomeSessionID = ? AND Status = 1`,
+    [HomeSessionID],
+    (error, results) => {
+      if (error) return callBack(error.message);
+      return callBack(null, results);
+    }
+  );
+};
+
 exports.homeSessionReadUpdate = (data, callBack) => {
   db.query(
     `UPDATE home_sessions INNER JOIN patients ON home_sessions.PatientID = patients.PatientID SET home_sessions.IsRead = ?, home_sessions.Rating = ?, home_sessions.Update_By = ? WHERE home_sessions.HomeSessionID = ? AND patients.UserID = ? `,

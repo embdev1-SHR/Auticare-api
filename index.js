@@ -28,6 +28,7 @@ const appointmentRouter = require("./routes/appointment.route");
 const appointmentSlotRouter = require("./routes/appointmentSlot.route");
 const exceptionSlotRouter = require("./routes/exceptionSlot.route");
 const homeSessionRouter = require("./routes/homeSession.route");
+const homeSessionPublicRouter = require("./routes/homeSessionPublic.route");
 const probdatasRouter = require("./routes/probdata.route");
 const paymentRouter = require("./routes/payment.route");
 const storeEnquiryRouter = require("./routes/storeEnquiry.route");
@@ -66,6 +67,7 @@ app.use("/api/v1/app/auth", appAuthRouter);
 // Web Routes
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/patients", patientRouter);
+app.use("/api/v1/homeSessions", homeSessionPublicRouter); // public share-view — must be before verifyAccessToken
 app.use(verifyAccessToken);
 app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/centers", centerRouter);

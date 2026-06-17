@@ -5,6 +5,7 @@ const {
   homeSessionCreate,
   homeSessionUpdate,
   homeSessionReadUpdate,
+  homeSessionGenerateShareToken,
 } = require("../controllers/homeSession.controller");
 
 const { pageAuthorisation } = require("../middleware/authorization");
@@ -67,6 +68,13 @@ const {
  *         "500":
  *           description: Internal server error
  */
+// Generate a share token for a specific home session (therapist only)
+router.get(
+  "/share/generate/:HomeSessionID",
+  pageAuthorisation(["Therapist"]),
+  homeSessionGenerateShareToken
+);
+
 router.get(
   "/:PatientID",
   pageAuthorisation(["Therapist", "Patient"]),
