@@ -297,8 +297,8 @@ exports.contentCreate = (data, callBack) => {
     connection.beginTransaction((error) => {
       if (error) { connection.release(); return callBack(error.message); }
       connection.query(
-        `INSERT INTO contents ( ContentActivityName, ContentActivityDescription, ContentCategory, ContentType, FileUploadURL, Create_By ) VALUES ( ?, ?, ?, ?, ?, ? )`,
-        [data.ContentActivityName, data.ContentActivityDescription, data.ContentCategory, data.ContentType, data.FileUploadURL || null, data.UserID],
+        `INSERT INTO contents ( ContentActivityName, ContentActivityDescription, ContentCategory, ContentType, FileUploadURL, ActivityInstructionTitle, ActivityInstructionDescription, ContentDescription, Create_By ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )`,
+        [data.ContentActivityName, data.ContentActivityDescription || null, data.ContentCategory, data.ContentType, data.FileUploadURL || null, data.ThumbnailURL || null, data.Duration || null, data.ContentDescription || null, data.UserID],
         (error, contentResult) => {
           if (error) {
             return connection.rollback(() => { connection.release(); return callBack(error.message); });

@@ -465,16 +465,16 @@ router.post(
       .isEmpty()
       .withMessage("Field is required")
       .trim(),
-    body("ContentActivityDescription")
-      .not()
-      .isEmpty()
-      .withMessage("Field is required")
-      .trim(),
+    body("ContentActivityDescription").optional({ nullable: true }).trim(),
     body("ContentCategory")
       .not()
       .isEmpty()
       .withMessage("Field is required")
       .trim(),
+    body("FileUploadURL").optional({ nullable: true }).trim(),
+    body("ThumbnailURL").optional({ nullable: true }).trim(),
+    body("Duration").optional({ nullable: true }).trim(),
+    body("ContentDescription").optional({ nullable: true }).trim(),
     body("TherapyIDs")
       .isArray()
       .not()
