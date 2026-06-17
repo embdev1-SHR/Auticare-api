@@ -19,4 +19,5 @@ exports.upload = multer({
       cb(null, Date.now().toString() + file.originalname.slice(((file.originalname.lastIndexOf(".") - 2) >>> 0) + 2));
     },
   }),
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500 MB — covers video files
 });
