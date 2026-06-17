@@ -2,7 +2,14 @@ const db = require("../config/db.config");
 
 exports.storeEnquiryList = (callBack) => {
   db.query(
-    `SELECT store_enquiries.*, therapists.Name, login_users.EmailId, login_users.Phone, products.ProductName FROM store_enquiries INNER JOIN therapists ON therapists.UserID = store_enquiries.Create_By INNER JOIN login_users on login_users.UserID = therapists.UserID INNER JOIN products ON products.ProductID = store_enquiries.ProductID`,
+    `SELECT store_enquiries.*, login_users.EmailId, login_users.Phone, products.ProductName,
+      COALESCE(therapists.Name, centers.CenterName, clients.ClientName, login_users.UserName) AS Name
+    FROM store_enquiries
+    INNER JOIN login_users ON login_users.UserID = store_enquiries.Create_By
+    LEFT JOIN therapists ON therapists.UserID = store_enquiries.Create_By
+    LEFT JOIN centers ON centers.UserID = store_enquiries.Create_By
+    LEFT JOIN clients ON clients.UserID = store_enquiries.Create_By
+    INNER JOIN products ON products.ProductID = store_enquiries.ProductID`,
     (error, results) => {
       if (error) {
         return callBack(error.message);
@@ -13,7 +20,15 @@ exports.storeEnquiryList = (callBack) => {
 
 exports.storeEnquiryDetails = (StoreEnquiryID, callBack) => {
   db.query(
-    `SELECT store_enquiries.*, therapists.Name, login_users.EmailId, login_users.Phone, products.ProductName FROM store_enquiries INNER JOIN therapists ON therapists.UserID = store_enquiries.Create_By INNER JOIN login_users on login_users.UserID = therapists.UserID INNER JOIN products ON products.ProductID = store_enquiries.ProductID WHERE StoreEnquiryID = ?`,
+    `SELECT store_enquiries.*, login_users.EmailId, login_users.Phone, products.ProductName,
+      COALESCE(therapists.Name, centers.CenterName, clients.ClientName, login_users.UserName) AS Name
+    FROM store_enquiries
+    INNER JOIN login_users ON login_users.UserID = store_enquiries.Create_By
+    LEFT JOIN therapists ON therapists.UserID = store_enquiries.Create_By
+    LEFT JOIN centers ON centers.UserID = store_enquiries.Create_By
+    LEFT JOIN clients ON clients.UserID = store_enquiries.Create_By
+    INNER JOIN products ON products.ProductID = store_enquiries.ProductID
+    WHERE StoreEnquiryID = ?`,
     [StoreEnquiryID],
     (error, results) => {
       if (error) {
