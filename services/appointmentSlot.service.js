@@ -25,12 +25,23 @@ exports.appointmentSlotList = (callBack) => {
 
 exports.appointmentSlotListByTherapistID = (TherapistID, callBack) => {
   db.query(
-    `SELECT appointment_slots.*, therapists.Salutation, therapists.Name, therapists.Designation, therapists.Language, therapists.Photo, therapists.TherapistType, centers.CenterName, login_users.Token FROM therapists INNER JOIN appointment_slots ON therapists.TherapistID = appointment_slots.TherapistID INNER JOIN centers ON centers.CenterID = therapists.CenterID INNER JOIN login_users ON login_users.UserID = therapists.UserID WHERE appointment_slots.TherapistID = ?`,
-    TherapistID,
+    `SELECT appointment_slots.*, therapists.Salutation, therapists.Name, therapists.Designation, therapists.Language, therapists.Photo, therapists.TherapistType, centers.CenterName, login_users.Token FROM therapists INNER JOIN appointment_slots ON therapists.TherapistID = appointment_slots.TherapistID LEFT JOIN centers ON centers.CenterID = therapists.CenterID LEFT JOIN login_users ON login_users.UserID = therapists.UserID WHERE appointment_slots.TherapistID = ?`,
+    [TherapistID],
     (error, results) => {
       if (error) {
         return callBack(error.message);
       } else return callBack(null, results);
+    }
+  );
+};
+
+exports.getSlotsByTherapistID = (TherapistID, callBack) => {
+  db.query(
+    `SELECT AppointmentSlotID, StartTime, EndTime FROM appointment_slots WHERE TherapistID = ?`,
+    [TherapistID],
+    (error, results) => {
+      if (error) return callBack(error.message);
+      return callBack(null, results);
     }
   );
 };
