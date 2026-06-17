@@ -25,14 +25,16 @@ exports.homeSessionListByTherapistUserID = (data, callBack) => {
 };
 
 exports.homeSessionCreate = (data, callBack) => {
+  // Requires: ALTER TABLE home_sessions ADD COLUMN ThumbnailURL VARCHAR(1000) NULL;
   db.query(
-    `INSERT INTO home_sessions ( PatientID, ResourceTitle, ResourceDescription, ResourceType, ResourceURL, Create_By ) VALUES ( ?, ?, ?, ?, ?, ? )`,
+    `INSERT INTO home_sessions ( PatientID, ResourceTitle, ResourceDescription, ResourceType, ResourceURL, ThumbnailURL, Create_By ) VALUES ( ?, ?, ?, ?, ?, ?, ? )`,
     [
       data.PatientID,
       data.ResourceTitle,
       data.ResourceDescription,
       data.ResourceType,
       data.ResourceURL,
+      data.ThumbnailURL || null,
       data.UserID,
     ],
     (error, results) => {
@@ -49,12 +51,13 @@ exports.homeSessionCreate = (data, callBack) => {
 
 exports.homeSessionUpdate = (data, callBack) => {
   db.query(
-    `UPDATE home_sessions SET ResourceTitle = ?, ResourceDescription = ?, ResourceType = ?, ResourceURL = ?, Status = ?, Update_By = ? WHERE HomeSessionID = ? AND Create_By = ?`,
+    `UPDATE home_sessions SET ResourceTitle = ?, ResourceDescription = ?, ResourceType = ?, ResourceURL = ?, ThumbnailURL = ?, Status = ?, Update_By = ? WHERE HomeSessionID = ? AND Create_By = ?`,
     [
       data.ResourceTitle,
       data.ResourceDescription,
       data.ResourceType,
       data.ResourceURL,
+      data.ThumbnailURL !== undefined ? data.ThumbnailURL : null,
       data.Status,
       data.UserID,
       data.HomeSessionID,
@@ -74,7 +77,7 @@ exports.homeSessionUpdate = (data, callBack) => {
 
 exports.homeSessionGetByID = (HomeSessionID, callBack) => {
   db.query(
-    `SELECT HomeSessionID, ResourceTitle, ResourceDescription, ResourceType, ResourceURL FROM home_sessions WHERE HomeSessionID = ? AND Status = 1`,
+    `SELECT HomeSessionID, ResourceTitle, ResourceDescription, ResourceType, ResourceURL, ThumbnailURL FROM home_sessions WHERE HomeSessionID = ? AND Status = 1`,
     [HomeSessionID],
     (error, results) => {
       if (error) return callBack(error.message);

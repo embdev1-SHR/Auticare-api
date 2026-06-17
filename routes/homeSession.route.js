@@ -174,6 +174,10 @@ router.post(
       .isURL()
       .withMessage("Value must be a url")
       .optional({ checkFalsy: true }),
+    body("ThumbnailURL")
+      .isURL()
+      .withMessage("Value must be a url")
+      .optional({ checkFalsy: true }),
   ],
   validateRequestSchema,
   homeSessionCreate
@@ -291,6 +295,10 @@ router.put(
       .withMessage("Field is required")
       .trim(),
     body("ResourceURL")
+      .isURL()
+      .withMessage("Value must be a url")
+      .optional({ checkFalsy: true }),
+    body("ThumbnailURL")
       .isURL()
       .withMessage("Value must be a url")
       .optional({ checkFalsy: true }),
