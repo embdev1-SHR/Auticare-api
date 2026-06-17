@@ -71,10 +71,15 @@ app.get("/api/migrate/add-thumbnail-url", (req, res) => {
   }
   const db = require("./config/db.config");
   db.query(
-    `ALTER TABLE home_sessions ADD COLUMN IF NOT EXISTS ThumbnailURL VARCHAR(1000) NULL`,
+    `ALTER TABLE home_sessions ADD COLUMN ThumbnailURL VARCHAR(1000) NULL`,
     (error) => {
-      if (error) return res.status(500).json({ success: false, message: error.message });
-      return res.status(200).json({ success: true, message: "ThumbnailURL column added (or already existed)" });
+      if (error) {
+        if (error.code === "ER_DUP_FIELDNAME") {
+          return res.status(200).json({ success: true, message: "ThumbnailURL column already exists" });
+        }
+        return res.status(500).json({ success: false, message: error.message });
+      }
+      return res.status(200).json({ success: true, message: "ThumbnailURL column added successfully" });
     }
   );
 });
