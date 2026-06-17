@@ -64,6 +64,21 @@ app.use(
 // App Routes
 app.use("/api/v1/app/auth", appAuthRouter);
 
+// One-time migration endpoint — remove after running
+app.get("/api/migrate/add-thumbnail-url", (req, res) => {
+  if (req.query.secret !== process.env.JWT_ACCESS_TOKEN_SECRET) {
+    return res.status(403).json({ success: false, message: "Forbidden" });
+  }
+  const db = require("./config/db.config");
+  db.query(
+    `ALTER TABLE home_sessions ADD COLUMN IF NOT EXISTS ThumbnailURL VARCHAR(1000) NULL`,
+    (error) => {
+      if (error) return res.status(500).json({ success: false, message: error.message });
+      return res.status(200).json({ success: true, message: "ThumbnailURL column added (or already existed)" });
+    }
+  );
+});
+
 // Web Routes
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/patients", patientRouter);
