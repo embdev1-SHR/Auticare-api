@@ -174,28 +174,37 @@ exports.appointmentCreate = (req, res) => {
   let data = {
     ...req.body,
     UserID: req.userData.UserID,
+    RoleName: req.userData.RoleName,
   };
-  patientDetailsByUserID(data.UserID, (error, results) => {
-    if (error) {
-      console.log(error);
-      return res.status(500).send({ success: false, errors: { message: error } });
-    }
-    if (!results.length) {
-      return res.status(404).send({ success: false, errors: { message: "Patient not found" } });
-    }
-    data.PatientID = results[0].PatientID;
+
+  const doCreate = () => {
     appointmentCreate(data, (error, results) => {
       if (error) {
         console.log(error);
         return res.status(500).send({ success: false, errors: { message: error } });
       }
-
       return res.status(201).send({
         success: true,
         results: { message: results },
       });
     });
-  });
+  };
+
+  if (data.PatientID) {
+    doCreate();
+  } else {
+    patientDetailsByUserID(data.UserID, (error, results) => {
+      if (error) {
+        console.log(error);
+        return res.status(500).send({ success: false, errors: { message: error } });
+      }
+      if (!results.length) {
+        return res.status(404).send({ success: false, errors: { message: "Patient not found" } });
+      }
+      data.PatientID = results[0].PatientID;
+      doCreate();
+    });
+  }
 };
 
 exports.appointmentUploadsCreate = (req, res) => {

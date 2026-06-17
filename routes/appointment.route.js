@@ -236,11 +236,12 @@ router.get("/:AppointmentID/uploads", pageAuthorisation(["Therapist", "Patient"]
  */
 router.post(
   "/",
-  pageAuthorisation(["Patient"]),
+  pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center", "Therapist", "Patient"]),
   [
     body("TherapistID").isNumeric().withMessage("Value must be a number").trim(),
     body("AppointmentSlotID").isNumeric().withMessage("Value must be a number").trim(),
     body("ScheduledDate").isDate({ format: "MM/DD/YYYY" }).withMessage("Value must be a date with MM/DD/YYYY format"),
+    body("PatientID").optional({ nullable: true }).isNumeric().withMessage("Value must be a number"),
     body("PaymentID").not().isEmpty().withMessage("Field is required").trim().optional({ checkFalsy: true }),
     body("PaymentStatus").not().isEmpty().withMessage("Field is required").trim().optional({ checkFalsy: true }),
     body("AppointmentStatus").not().isEmpty().withMessage("Field is required").trim().optional({ checkFalsy: true }),

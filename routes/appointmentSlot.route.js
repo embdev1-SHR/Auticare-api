@@ -118,7 +118,7 @@ router.get(
  */
 router.get(
   "/:TherapistID",
-  pageAuthorisation(["Patient"]),
+  pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center", "Therapist", "Patient"]),
   appointmentSlotListByTherapistID
 );
 
