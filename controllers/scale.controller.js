@@ -339,6 +339,23 @@ exports.scaleCreate = async (req, res) => {
   if (data.ScaleMetric == "Assessment" && data.ScaleMetricType == "ABLLS") {
     data.Categories = categories;
   }
+
+  // Trivandrum scales are always Default — accessible to all logins, no subscription limit
+  if (data.ScaleMetricType === "Trivandrum") {
+    data.ScaleType = "Default";
+    scaleCreate(data, (error, results, insertId) => {
+      if (error) {
+        console.log(error);
+        return res.status(500).send({ success: false, errors: { message: error } });
+      }
+      return res.status(201).send({
+        success: true,
+        results: { message: results, insertId },
+      });
+    });
+    return;
+  }
+
   if (data.RoleName != "SuperAdmin") {
     const subscriptionResults = (await subscriptionPlanDetailsByUserID(data.UserID))[0];
     data.ScaleType = "Custom";
