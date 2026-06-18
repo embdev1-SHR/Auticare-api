@@ -15,7 +15,16 @@ exports.clientList = (callBack) => {
 
 exports.clientListDesc = async () => {
   const [rows] = await promiseDB.query(
-    `SELECT clients.*, login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, COALESCE(clients.ClientName, login_users.UserName) AS ClientName, CASE WHEN clients.ClientType IS NOT NULL THEN 'Complete' ELSE 'Pending' END AS OnboardingStatus, COALESCE(clients.SubscriptionPlanStatus, 'Not Assigned') AS PaymentStatus, COALESCE(( SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID ), 0) AS CentersCount, COUNT(therapists.CenterID) AS TherapistsCount FROM login_users LEFT JOIN clients ON login_users.UserID = clients.UserID LEFT JOIN centers ON centers.ClientID = clients.ClientID LEFT JOIN therapists ON therapists.CenterID = centers.CenterID WHERE login_users.Status = 1 AND login_users.RoleId = 2 GROUP BY login_users.UserID ORDER BY login_users.Create_TS DESC LIMIT 5;`
+    `SELECT
+      login_users.UserID,
+      COALESCE(clients.ClientName, login_users.UserName) AS ClientName,
+      clients.ClientID,
+      COALESCE((SELECT COUNT(*) FROM centers WHERE centers.ClientID = clients.ClientID), 0) AS CentersCount
+    FROM login_users
+    LEFT JOIN clients ON login_users.UserID = clients.UserID
+    WHERE login_users.Status = 1 AND login_users.RoleId = 2
+    ORDER BY login_users.Create_TS DESC
+    LIMIT 5`
   );
   return rows;
 };
