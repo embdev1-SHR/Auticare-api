@@ -357,32 +357,43 @@ exports.scaleCreate = async (req, res) => {
   }
 
   if (data.RoleName != "SuperAdmin") {
-    const subscriptionResults = (await subscriptionPlanDetailsByUserID(data.UserID))[0];
-    data.ScaleType = "Custom";
-    let scaleCount = 0;
-    if (data.RoleName == "ClientAdmin") {
-      scaleCount = (await scaleCountByClientUserID(data.UserID))[0].ScaleCount;
-    } else if (data.RoleName == "Center") {
-      scaleCount = (await scaleCountByCenterUserID(data.UserID))[0].ScaleCount;
-    } else if (data.RoleName == "Therapist") {
-      scaleCount = (await scaleCountByTherapistUserID(data.UserID))[0].ScaleCount;
-    }
-    if (scaleCount >= subscriptionResults.NumberofCustomScales) {
-      return res.status(400).send({
-        success: false,
-        errors: { message: "The number of scales allowed in the subscription plan has already been created" },
-      });
-    } else {
-      scaleCreate(data, (error, results, insertId) => {
-        if (error) {
-          console.log(error);
-          return res.status(500).send({ success: false, errors: { message: error } });
-        }
-        return res.status(201).send({
-          success: true,
-          results: { message: results, insertId },
+    try {
+      const subscriptionResults = (await subscriptionPlanDetailsByUserID(data.UserID))[0];
+      if (!subscriptionResults) {
+        return res.status(400).send({
+          success: false,
+          errors: { message: "No active subscription plan found for this account" },
         });
-      });
+      }
+      data.ScaleType = "Custom";
+      let scaleCount = 0;
+      if (data.RoleName == "ClientAdmin") {
+        scaleCount = (await scaleCountByClientUserID(data.UserID))[0].ScaleCount;
+      } else if (data.RoleName == "Center") {
+        scaleCount = (await scaleCountByCenterUserID(data.UserID))[0].ScaleCount;
+      } else if (data.RoleName == "Therapist") {
+        scaleCount = (await scaleCountByTherapistUserID(data.UserID))[0].ScaleCount;
+      }
+      if (scaleCount >= subscriptionResults.NumberofCustomScales) {
+        return res.status(400).send({
+          success: false,
+          errors: { message: "The number of scales allowed in the subscription plan has already been created" },
+        });
+      } else {
+        scaleCreate(data, (error, results, insertId) => {
+          if (error) {
+            console.log(error);
+            return res.status(500).send({ success: false, errors: { message: error } });
+          }
+          return res.status(201).send({
+            success: true,
+            results: { message: results, insertId },
+          });
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send({ success: false, errors: { message: error.message || "Failed to create scale" } });
     }
   } else {
     data.ScaleType = "Default";

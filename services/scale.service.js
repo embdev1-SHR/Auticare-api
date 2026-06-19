@@ -259,10 +259,10 @@ exports.scaleSearchByScaleNameNTherapistUserID = (data, callBack) => {
 };
 
 exports.scaleCreate = async (data, callBack) => {
-  const connection = await dbAwait.awaitGetConnection();
+  const connection = await promiseDB.getConnection();
   try {
-    await connection.awaitBeginTransaction();
-    const scaleResult = await connection.awaitQuery(
+    await connection.beginTransaction();
+    const [scaleResult] = await connection.query(
       `INSERT INTO scales ( ScaleName, Accreditation, ScaleCategory, ScaleMetric, ScaleMetricType, ScaleType, Create_By ) VALUES ( ?, ?, ?, ?, ?, ?, ? )`,
       [
         data.ScaleName,
@@ -275,42 +275,34 @@ exports.scaleCreate = async (data, callBack) => {
       ]
     );
     const ScaleID = scaleResult?.insertId;
-    const categoriesArray = [];
     const array = data.Categories ? data.Categories : [];
     if (array.length) {
-      for (let index = 0; index < array.length; index++) {
-        const element = array[index];
-        categoriesArray.push([ScaleID, element.CategoryName, element.CategoryLabel, data.UserID]);
-      }
-      await connection.awaitQuery(
+      const categoriesArray = array.map(el => [ScaleID, el.CategoryName, el.CategoryLabel, data.UserID]);
+      await connection.query(
         `INSERT INTO categories ( ScaleID, CategoryName, CategoryLabel, Create_By ) VALUES ?`,
         [categoriesArray]
       );
     }
-    const skillIDList = [];
     const skillIDs = data?.SkillIDs;
     if (skillIDs?.length) {
-      for (let index = 0; index < skillIDs.length; index++) {
-        const element = skillIDs[index];
-        skillIDList.push([ScaleID, element, data.UserID]);
-      }
-      await connection.awaitQuery(`INSERT INTO scale_skill_mappings ( ScaleID, SkillID, Create_By ) VALUES ?`, [
-        skillIDList,
-      ]);
+      const skillIDList = skillIDs.map(id => [ScaleID, id, data.UserID]);
+      await connection.query(
+        `INSERT INTO scale_skill_mappings ( ScaleID, SkillID, Create_By ) VALUES ?`,
+        [skillIDList]
+      );
     }
-    await connection.awaitCommit();
-    await connection.release();
+    await connection.commit();
+    connection.release();
     if (scaleResult.affectedRows >= 1) {
       return callBack(null, "Scale created successfully", ScaleID);
     } else {
-      return callBack("Failed to create scale", null, 500);
+      return callBack("Failed to create scale");
     }
   } catch (error) {
     console.warn(error);
-    connection.rollback(async () => {
-      await connection.release();
-      return callBack(error.message);
-    });
+    await connection.rollback();
+    connection.release();
+    return callBack(error.message);
   }
 };
 
