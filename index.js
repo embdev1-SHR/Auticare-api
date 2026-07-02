@@ -69,11 +69,8 @@ app.use("/api/v1/app/auth", appAuthRouter);
 // Web Routes
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/patients", patientRouter);
-<<<<<<< Updated upstream
 app.use("/api/v1/homeSessions", homeSessionPublicRouter); // public share-view — must be before verifyAccessToken
-=======
 app.use("/api/v1/external", externalRouter);
->>>>>>> Stashed changes
 app.use(verifyAccessToken);
 app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/centers", centerRouter);
