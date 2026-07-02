@@ -35,6 +35,7 @@ const storeEnquiryRouter = require("./routes/storeEnquiry.route");
 const storeOrderRouter = require("./routes/storeOrder.route");
 const products = require("./routes/products.route");
 const externalRouter = require("./routes/external.route");
+const blueroomRouter = require("./routes/blueroom.route");
 // const assessmentRouter = require("./routes/assessment.route");
 // const moduleRouter = require("./routes/module.route");
 
@@ -96,6 +97,7 @@ app.use("/api/v1/probdatas", probdatasRouter);
 app.use("/api/v1/storeEnquiries", storeEnquiryRouter);
 app.use("/api/v1/storeOrders", storeOrderRouter);
 app.use("/api/v1/products", products);
+app.use("/api/v1/blueroom", blueroomRouter);
 // app.use("/api/v1/assessments", assessmentRouter);
 // app.use("/api/v1/modules", moduleRouter);
 
