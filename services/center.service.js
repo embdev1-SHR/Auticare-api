@@ -1,8 +1,10 @@
 const db = require("../config/db.config");
+const crypto = require("crypto");
+const generateApiKey = () => crypto.randomBytes(32).toString("hex");
 
 exports.centerList = (callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID WHERE login_users.Status = 1;`,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, centers.CenterApiKey, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID WHERE login_users.Status = 1;`,
     (error, results) => {
       if (error) {
         return callBack(error.message);
@@ -13,7 +15,7 @@ exports.centerList = (callBack) => {
 
 exports.centerListByClientUserID = (UserID, callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID WHERE clients.UserID = ? AND login_users.Status = 1;`,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, centers.CenterApiKey, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID WHERE clients.UserID = ? AND login_users.Status = 1;`,
     [UserID],
     (error, results) => {
       if (error) {
@@ -25,7 +27,7 @@ exports.centerListByClientUserID = (UserID, callBack) => {
 
 exports.centerDetails = (CenterID, callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID WHERE centers.CenterID = ? AND login_users.Status = 1;`,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, centers.CenterApiKey, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID WHERE centers.CenterID = ? AND login_users.Status = 1;`,
     [CenterID],
     (error, results) => {
       if (error) {
@@ -37,7 +39,7 @@ exports.centerDetails = (CenterID, callBack) => {
 
 exports.centerDetailsByClientUserID = (data, callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID WHERE clients.UserID = ? AND centers.CenterID = ? AND login_users.Status = 1;`,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, centers.CenterApiKey, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID WHERE clients.UserID = ? AND centers.CenterID = ? AND login_users.Status = 1;`,
     [data.UserID, data.CenterID],
     (error, results) => {
       if (error) {
@@ -49,7 +51,7 @@ exports.centerDetailsByClientUserID = (data, callBack) => {
 
 exports.centerDetailsByCenterUserID = (data, callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID AND centers.UserID = ? AND login_users.Status = 1;`,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, centers.CenterApiKey, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID AND centers.UserID = ? AND login_users.Status = 1;`,
     // `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID AND centers.CenterID = ? AND centers.UserID = ? `,
     [data.UserID],
     // [data.CenterID, data.UserID],
@@ -63,7 +65,7 @@ exports.centerDetailsByCenterUserID = (data, callBack) => {
 
 exports.centerSearch = (data, callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID AND centers.CenterName LIKE '%${data.CenterName}%' AND login_users.EmailId LIKE '%${data.EmailId}%' AND login_users.Status = 1;`,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, centers.CenterApiKey, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID AND centers.CenterName LIKE '%${data.CenterName}%' AND login_users.EmailId LIKE '%${data.EmailId}%' AND login_users.Status = 1;`,
     (error, results) => {
       if (error) {
         return callBack(error.message);
@@ -74,7 +76,7 @@ exports.centerSearch = (data, callBack) => {
 
 exports.centerSearchByClientUserID = (data, callBack) => {
   db.query(
-    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID WHERE centers.CenterName LIKE '%${data.CenterName}%' AND login_users.EmailId LIKE '%${data.EmailId}%' AND clients.UserID = ${data.UserID} AND login_users.Status = 1;`,
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.AddressLine1, login_users.AddressLine2, login_users.City, login_users.District, login_users.Pincode, login_users.State, login_users.Country, login_users.RoleId, login_users.Status, login_users.Create_TS, login_users.Update_TS, login_users.Create_By, login_users.Update_By, centers.CenterID, centers.UserID, centers.ClientID, centers.CenterName, centers.CenterType, centers.CenterHeadSalutation, centers.CenterHeadName, centers.CenterHeadDesignation, centers.CenterHeadEmailId, centers.CenterHeadPhone, centers.CenterApiKey, clients.ClientName FROM login_users INNER JOIN centers ON login_users.UserID = centers.UserID INNER JOIN clients ON clients.ClientID = centers.ClientID WHERE centers.CenterName LIKE '%${data.CenterName}%' AND login_users.EmailId LIKE '%${data.EmailId}%' AND clients.UserID = ${data.UserID} AND login_users.Status = 1;`,
     (error, results) => {
       if (error) {
         return callBack(error.message);
@@ -120,7 +122,7 @@ exports.centerCreate = (data, callBack) => {
               } else {
                 const UserID = login_usersResult?.insertId;
                 connection.query(
-                  `INSERT INTO centers ( UserID, ClientID, CenterName, CenterType, CenterHeadSalutation, CenterHeadName, CenterHeadDesignation, CenterHeadEmailId, CenterHeadPhone ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                  `INSERT INTO centers ( UserID, ClientID, CenterName, CenterType, CenterHeadSalutation, CenterHeadName, CenterHeadDesignation, CenterHeadEmailId, CenterHeadPhone, CenterApiKey ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                   [
                     UserID,
                     data.ClientID,
@@ -131,6 +133,7 @@ exports.centerCreate = (data, callBack) => {
                     data.CenterHeadDesignation,
                     data.CenterHeadEmailId,
                     data.CenterHeadPhone,
+                    generateApiKey(),
                   ],
                   (error, centersResult) => {
                     if (error) {
@@ -189,9 +192,9 @@ exports.centerCreateFromPending = (data, callBack) => {
             const clientID = data.ClientID || pending.ClientID;
             if (!clientID) { connection.release(); return callBack("ClientID required for legacy center approval"); }
             connection.query(
-              `INSERT INTO centers (UserID, ClientID, CenterName, CenterType, CenterHeadSalutation, CenterHeadName, CenterHeadDesignation, CenterHeadEmailId, CenterHeadPhone)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              [pending.UserID, clientID, centerName, 'Association', '', centerName, 'Director', pending.EmailId, pending.Phone || ''],
+              `INSERT INTO centers (UserID, ClientID, CenterName, CenterType, CenterHeadSalutation, CenterHeadName, CenterHeadDesignation, CenterHeadEmailId, CenterHeadPhone, CenterApiKey)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [pending.UserID, clientID, centerName, 'Association', '', centerName, 'Director', pending.EmailId, pending.Phone || '', generateApiKey()],
               (error) => {
                 connection.release();
                 if (error) return callBack(error.message);
@@ -623,4 +626,58 @@ exports.getCenterByCenterIDNCenterUserId = (data, callBack) => {
       } else return callBack(null, results);
     }
   );
+};
+
+exports.getCenterByApiKey = (apiKey, callBack) => {
+  db.query(
+    `SELECT login_users.UserID, login_users.EmailId, login_users.UserName, login_users.Phone, login_users.Status,
+            centers.CenterID, centers.ClientID, centers.CenterName, centers.CenterType,
+            centers.CenterHeadName, centers.CenterHeadEmailId, centers.CenterHeadPhone, centers.CenterApiKey,
+            clients.ClientName
+     FROM centers
+     INNER JOIN login_users ON login_users.UserID = centers.UserID
+     INNER JOIN clients ON clients.ClientID = centers.ClientID
+     WHERE centers.CenterApiKey = ? AND login_users.Status = 1`,
+    [apiKey],
+    (error, results) => {
+      if (error) return callBack(error.message);
+      return callBack(null, results);
+    }
+  );
+};
+
+exports.regenerateCenterApiKey = (CenterID, callBack) => {
+  const newKey = generateApiKey();
+  db.query(
+    `UPDATE centers SET CenterApiKey = ? WHERE CenterID = ?`,
+    [newKey, CenterID],
+    (error, result) => {
+      if (error) return callBack(error.message);
+      if (result.affectedRows < 1) return callBack("Center not found", null, 404);
+      return callBack(null, { CenterApiKey: newKey });
+    }
+  );
+};
+
+exports.generateApiKeysForAllCenters = (callBack) => {
+  db.query(`SELECT CenterID FROM centers WHERE CenterApiKey IS NULL OR CenterApiKey = ''`, (error, rows) => {
+    if (error) return callBack(error.message);
+    if (!rows.length) return callBack(null, { updated: 0 });
+    let remaining = rows.length;
+    let failed = 0;
+    rows.forEach((row) => {
+      db.query(
+        `UPDATE centers SET CenterApiKey = ? WHERE CenterID = ?`,
+        [generateApiKey(), row.CenterID],
+        (err) => {
+          if (err) failed++;
+          remaining--;
+          if (remaining === 0) {
+            if (failed > 0) return callBack(`${failed} center(s) failed to update`);
+            return callBack(null, { updated: rows.length });
+          }
+        }
+      );
+    });
+  });
 };

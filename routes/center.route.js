@@ -7,6 +7,8 @@ const {
   centerUpdate,
   centerDelete,
   centerSearch,
+  regenerateApiKey,
+  generateApiKeys,
 } = require("../controllers/center.controller");
 const { validateRequestSchema } = require("../middleware/validateRequestSchema");
 const { pageAuthorisation } = require("../middleware/authorization");
@@ -620,6 +622,10 @@ router.put(
  *           description: Internal server error
  */
 router.delete("/:CenterID", pageAuthorisation(["SuperAdmin", "ClientAdmin"]), centerDelete);
+
+router.post("/generate-api-keys", pageAuthorisation(["SuperAdmin"]), generateApiKeys);
+router.post("/:CenterID/regenerate-api-key", pageAuthorisation(["SuperAdmin"]), regenerateApiKey);
+
 module.exports = router;
 
 /**

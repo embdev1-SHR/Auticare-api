@@ -34,6 +34,7 @@ const paymentRouter = require("./routes/payment.route");
 const storeEnquiryRouter = require("./routes/storeEnquiry.route");
 const storeOrderRouter = require("./routes/storeOrder.route");
 const products = require("./routes/products.route");
+const externalRouter = require("./routes/external.route");
 // const assessmentRouter = require("./routes/assessment.route");
 // const moduleRouter = require("./routes/module.route");
 
@@ -68,7 +69,11 @@ app.use("/api/v1/app/auth", appAuthRouter);
 // Web Routes
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/patients", patientRouter);
+<<<<<<< Updated upstream
 app.use("/api/v1/homeSessions", homeSessionPublicRouter); // public share-view — must be before verifyAccessToken
+=======
+app.use("/api/v1/external", externalRouter);
+>>>>>>> Stashed changes
 app.use(verifyAccessToken);
 app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/centers", centerRouter);

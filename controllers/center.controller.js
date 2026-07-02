@@ -13,6 +13,8 @@ const {
   centerDetailsByCenterUserID,
   centerDetailsByClientUserID,
   centerListByClientUserID,
+  regenerateCenterApiKey,
+  generateApiKeysForAllCenters,
 } = require("../services/center.service");
 const { getClientByClientId, getClientByUserId } = require("../services/client.service");
 const { generatePassword } = require("../helpers/randomNumbers");
@@ -336,4 +338,29 @@ exports.centerDelete = (req, res) => {
       },
     });
   }
+};
+
+exports.regenerateApiKey = (req, res) => {
+  if (req.userData.RoleName !== "SuperAdmin") {
+    return res.status(403).send({ success: false, errors: { message: "The user does not have access" } });
+  }
+  const CenterID = req.params.CenterID;
+  regenerateCenterApiKey(CenterID, (error, result, status) => {
+    if (error) {
+      return res.status(status || 500).send({ success: false, errors: { message: error } });
+    }
+    return res.status(200).send({ success: true, results: { data: result } });
+  });
+};
+
+exports.generateApiKeys = (req, res) => {
+  if (req.userData.RoleName !== "SuperAdmin") {
+    return res.status(403).send({ success: false, errors: { message: "The user does not have access" } });
+  }
+  generateApiKeysForAllCenters((error, result) => {
+    if (error) {
+      return res.status(500).send({ success: false, errors: { message: error } });
+    }
+    return res.status(200).send({ success: true, results: { message: `Generated API keys for ${result.updated} center(s)` } });
+  });
 };
