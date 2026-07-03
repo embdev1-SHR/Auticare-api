@@ -6,6 +6,7 @@ const {
   getClasses, setDepartmentAuth, getDepartmentCredentials, loginWithDepartmentAuth,
   getClassStudents,
   logActivity, getActivitySummary, getHeatmapData, getCompletionTimeSeries,
+  startSession, heartbeatSession, endSession,
 } = require("../services/external.service");
 
 // ── Middleware: verify center JWT ────────────────────────────────────────────
@@ -146,23 +147,67 @@ router.get("/classes/:classId/students", verifyCenterToken, (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
+// LIVE SESSION LIFECYCLE  (center JWT — Electron drives these)
+// POST /api/v1/external/session/start      body: { sessionId, StudentID?, PatientName?, ClassID?, ClassName?, mode, deviceId? }
+// POST /api/v1/external/session/heartbeat  body: { sessionId, currentActivity? }
+// POST /api/v1/external/session/end        body: { sessionId }
+// ══════════════════════════════════════════════════════════════════════════════
+router.post("/session/start", verifyCenterToken, (req, res) => {
+  const { sessionId, StudentID, PatientName, ClassID, ClassName, mode, deviceId, currentActivity } = req.body;
+  if (!sessionId) return res.status(400).send({ success: false, errors: { message: "sessionId required" } });
+  startSession({
+    SessionID: sessionId,
+    CenterID: req.centerData.CenterID,
+    PatientID: StudentID || null,
+    PatientName: PatientName || null,
+    ClassID: ClassID || null,
+    ClassName: ClassName || null,
+    SessionMode: mode || null,
+    DeviceID: deviceId || null,
+    CurrentActivity: currentActivity || null,
+  }, (error, result) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true, results: result });
+  });
+});
+
+router.post("/session/heartbeat", verifyCenterToken, (req, res) => {
+  const { sessionId, currentActivity } = req.body;
+  if (!sessionId) return res.status(400).send({ success: false, errors: { message: "sessionId required" } });
+  heartbeatSession(sessionId, req.centerData.CenterID, currentActivity, (error) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true });
+  });
+});
+
+router.post("/session/end", verifyCenterToken, (req, res) => {
+  const { sessionId } = req.body;
+  if (!sessionId) return res.status(400).send({ success: false, errors: { message: "sessionId required" } });
+  endSession(sessionId, req.centerData.CenterID, (error) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true });
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
 // PATIENT ACTIVITY  (center JWT)
 // POST /api/v1/external/patient-activity
 // ══════════════════════════════════════════════════════════════════════════════
 router.post("/patient-activity", verifyCenterToken, (req, res) => {
-  const { StudentID, ClassID, eventType, data = {} } = req.body;
+  const { sessionId, StudentID, ClassID, mode, eventType, data = {} } = req.body;
   if (!eventType) return res.status(400).send({ success: false, errors: { message: "eventType required" } });
 
   logActivity({
     CenterID: req.centerData.CenterID,
+    SessionID: sessionId || null,
     PatientID: StudentID || null,
     ClassID: ClassID || null,
-    SessionMode: StudentID ? "individual" : "class",
+    SessionMode: mode || (StudentID ? "individual" : "class"),
     EventType: eventType,
     X: data.x, Y: data.y,
     ScreenWidth: data.screenWidth, ScreenHeight: data.screenHeight,
     ScenarioID: data.scenarioId, CompletionPct: data.completionPct,
-    DurationMs: data.durationMs, GameKey: data.gameKey,
+    DurationMs: data.durationMs, GameKey: data.gameKey, Label: data.label,
   }, (error) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true });

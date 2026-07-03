@@ -162,23 +162,128 @@ exports.getClassStudents = (classId, centerId, callBack) => {
 
 exports.logActivity = (payload, callBack) => {
   const {
-    CenterID, PatientID, ClassID, SessionMode,
+    CenterID, SessionID, PatientID, ClassID, SessionMode,
     EventType, X, Y, ScreenWidth, ScreenHeight,
-    ScenarioID, CompletionPct, DurationMs, GameKey
+    ScenarioID, CompletionPct, DurationMs, GameKey, Label
   } = payload;
 
   railwayDb.query(
     `INSERT INTO blueroom_events
-       (center_id, patient_id, class_id, session_mode, event_type,
+       (center_id, session_id, patient_id, class_id, session_mode, event_type,
         x, y, screen_width, screen_height, scenario_id,
-        completion_pct, duration_ms, game_key)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [CenterID, PatientID || null, ClassID || null, SessionMode || "individual",
+        completion_pct, duration_ms, game_key, label)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [CenterID, SessionID || null, PatientID || null, ClassID || null, SessionMode || "individual",
      EventType, X || null, Y || null, ScreenWidth || null, ScreenHeight || null,
-     ScenarioID || null, CompletionPct || null, DurationMs || null, GameKey || null],
+     ScenarioID || null, CompletionPct || null, DurationMs || null, GameKey || null, Label || null],
     (error, result) => {
       if (error) return callBack(error.message);
       return callBack(null, { id: result.insertId });
+    }
+  );
+};
+
+// ── Live session lifecycle ────────────────────────────────────────────────────
+
+// Session is considered live if it hasn't ended and sent a heartbeat recently.
+const LIVE_WINDOW_SECONDS = 45;
+
+exports.startSession = (s, callBack) => {
+  railwayDb.query(
+    `INSERT INTO blueroom_sessions
+       (session_id, center_id, patient_id, patient_name, class_id, class_name,
+        session_mode, device_id, current_activity, login_at, last_heartbeat, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), 'live')
+     ON DUPLICATE KEY UPDATE last_heartbeat = NOW(), status = 'live'`,
+    [s.SessionID, s.CenterID, s.PatientID || null, s.PatientName || null,
+     s.ClassID || null, s.ClassName || null, s.SessionMode || null,
+     s.DeviceID || null, s.CurrentActivity || null],
+    (error) => {
+      if (error) return callBack(error.message);
+      return callBack(null, { sessionId: s.SessionID });
+    }
+  );
+};
+
+exports.heartbeatSession = (sessionId, centerId, currentActivity, callBack) => {
+  railwayDb.query(
+    `UPDATE blueroom_sessions
+     SET last_heartbeat = NOW(), status = 'live',
+         current_activity = COALESCE(?, current_activity)
+     WHERE session_id = ? AND center_id = ?`,
+    [currentActivity || null, sessionId, centerId],
+    (error) => {
+      if (error) return callBack(error.message);
+      return callBack(null, "ok");
+    }
+  );
+};
+
+exports.endSession = (sessionId, centerId, callBack) => {
+  railwayDb.query(
+    `UPDATE blueroom_sessions SET status = 'ended', ended_at = NOW()
+     WHERE session_id = ? AND center_id = ?`,
+    [sessionId, centerId],
+    (error) => {
+      if (error) return callBack(error.message);
+      return callBack(null, "ok");
+    }
+  );
+};
+
+// Live sessions for a center. Auto-expires stale ones (no heartbeat) first.
+exports.getLiveSessions = (centerId, callBack) => {
+  railwayDb.query(
+    `UPDATE blueroom_sessions SET status = 'ended', ended_at = last_heartbeat
+     WHERE center_id = ? AND status = 'live'
+       AND last_heartbeat < (NOW() - INTERVAL ? SECOND)`,
+    [centerId, LIVE_WINDOW_SECONDS],
+    (expireErr) => {
+      if (expireErr) return callBack(expireErr.message);
+      railwayDb.query(
+        `SELECT s.session_id, s.center_id, s.patient_id, s.patient_name,
+                s.class_id, s.class_name, s.session_mode, s.current_activity,
+                s.login_at, s.last_heartbeat,
+                TIMESTAMPDIFF(SECOND, s.login_at, NOW()) AS elapsed_seconds,
+                (SELECT COUNT(*) FROM blueroom_events e
+                   WHERE e.session_id = s.session_id AND e.event_type = 'touch') AS touch_count
+         FROM blueroom_sessions s
+         WHERE s.center_id = ? AND s.status = 'live'
+         ORDER BY s.last_heartbeat DESC`,
+        [centerId],
+        (error, rows) => {
+          if (error) return callBack(error.message);
+          return callBack(null, rows);
+        }
+      );
+    }
+  );
+};
+
+// Full session detail: the session row + its ordered event stream.
+exports.getSessionDetail = (sessionId, centerId, callBack) => {
+  railwayDb.query(
+    `SELECT session_id, center_id, patient_id, patient_name, class_id, class_name,
+            session_mode, device_id, current_activity, login_at, last_heartbeat,
+            ended_at, status,
+            TIMESTAMPDIFF(SECOND, login_at, COALESCE(ended_at, NOW())) AS elapsed_seconds
+     FROM blueroom_sessions WHERE session_id = ? AND center_id = ?`,
+    [sessionId, centerId],
+    (error, sRows) => {
+      if (error) return callBack(error.message);
+      if (!sRows.length) return callBack("Session not found", null, 404);
+      railwayDb.query(
+        `SELECT id, event_type, x, y, screen_width, screen_height,
+                scenario_id, game_key, label, completion_pct, duration_ms, ts
+         FROM blueroom_events
+         WHERE session_id = ? AND center_id = ?
+         ORDER BY ts ASC LIMIT 5000`,
+        [sessionId, centerId],
+        (err2, events) => {
+          if (err2) return callBack(err2.message);
+          return callBack(null, { session: sRows[0], events });
+        }
+      );
     }
   );
 };

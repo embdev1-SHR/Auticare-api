@@ -5,6 +5,7 @@ const {
   getClasses, setDepartmentAuth, getDepartmentCredentials,
   getClassStudents,
   getActivitySummary, getHeatmapData, getCompletionTimeSeries,
+  getLiveSessions, getSessionDetail,
 } = require("../services/external.service");
 
 const ALLOWED_ROLES = ["SuperAdmin", "ClientAdmin", "Center", "Therapist"];
@@ -53,6 +54,21 @@ router.get("/classes/:classId/students", pageAuthorisation(ALLOWED_ROLES), resol
   getClassStudents(req.params.classId, req.resolvedCenterID, (error, rows) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true, results: { data: rows } });
+  });
+});
+
+// ── Live monitoring ───────────────────────────────────────────────────────────
+router.get("/live", pageAuthorisation(ALLOWED_ROLES), resolveCenterID, (req, res) => {
+  getLiveSessions(req.resolvedCenterID, (error, rows) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true, results: { data: rows } });
+  });
+});
+
+router.get("/sessions/:sessionId", pageAuthorisation(ALLOWED_ROLES), resolveCenterID, (req, res) => {
+  getSessionDetail(req.params.sessionId, req.resolvedCenterID, (error, data, status) => {
+    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true, results: { data } });
   });
 });
 
