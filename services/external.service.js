@@ -362,6 +362,38 @@ exports.getPatientSessions = (centerId, patientId, limit, callBack) => {
   );
 };
 
+// Recent sessions for a center (for the Blueroom "Session Reports" list).
+// Optional filters: patientId, status ('ended'|'live'), search (patient name), limit.
+exports.getRecentSessions = (centerId, filters, callBack) => {
+  const { patientId, status, search, limit = 100 } = filters || {};
+  let where = "WHERE s.center_id = ?";
+  const params = [centerId];
+  if (patientId) { where += " AND s.patient_id = ?"; params.push(patientId); }
+  if (status)    { where += " AND s.status = ?";      params.push(status); }
+  if (search)    { where += " AND s.patient_name LIKE ?"; params.push(`%${search}%`); }
+  params.push(parseInt(limit, 10));
+
+  railwayDb.query(
+    `SELECT s.session_id, s.patient_id, s.patient_name, s.class_id, s.class_name,
+            s.session_mode, s.login_at, s.ended_at, s.status,
+            TIMESTAMPDIFF(SECOND, s.login_at, COALESCE(s.ended_at, s.last_heartbeat)) AS duration_seconds,
+            (SELECT COUNT(*) FROM blueroom_events e
+               WHERE e.session_id = s.session_id AND e.event_type = 'touch') AS touch_count,
+            (SELECT COUNT(DISTINCT e.game_key) FROM blueroom_events e
+               WHERE e.session_id = s.session_id AND e.event_type = 'scenario_start'
+                 AND e.game_key IS NOT NULL AND e.game_key <> 'menu') AS activity_count
+     FROM blueroom_sessions s
+     ${where}
+     ORDER BY s.login_at DESC
+     LIMIT ?`,
+    params,
+    (error, rows) => {
+      if (error) return callBack(error.message);
+      return callBack(null, rows);
+    }
+  );
+};
+
 // ── Activity queries ──────────────────────────────────────────────────────────
 
 exports.getActivitySummary = (centerId, filters, callBack) => {

@@ -6,7 +6,7 @@ const {
   getClassStudents,
   getActivitySummary, getHeatmapData, getCompletionTimeSeries,
   getLiveSessions, getSessionDetail,
-  getCenterByTherapistUserId, getPatientSessions,
+  getCenterByTherapistUserId, getPatientSessions, getRecentSessions,
 } = require("../services/external.service");
 
 const ALLOWED_ROLES = ["SuperAdmin", "ClientAdmin", "Center", "Therapist"];
@@ -69,6 +69,14 @@ router.get("/classes/:classId/students", pageAuthorisation(ALLOWED_ROLES), resol
 // ── Live monitoring ───────────────────────────────────────────────────────────
 router.get("/live", pageAuthorisation(ALLOWED_ROLES), resolveCenterID, (req, res) => {
   getLiveSessions(req.resolvedCenterID, (error, rows) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true, results: { data: rows } });
+  });
+});
+
+// List past/live sessions (Session Reports). Query: patientId, status, search, limit.
+router.get("/sessions", pageAuthorisation(ALLOWED_ROLES), resolveCenterID, (req, res) => {
+  getRecentSessions(req.resolvedCenterID, req.query, (error, rows) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true, results: { data: rows } });
   });
