@@ -141,39 +141,19 @@ exports.loginWithDepartmentAuth = (centerId, username, password, callBack) => {
 
 // ── Class students ────────────────────────────────────────────────────────────
 
+// Students of a class = patients assigned to that department (classId) under
+// this center. Pulled live from the main Auticare DB — no manual class roster.
 exports.getClassStudents = (classId, centerId, callBack) => {
-  railwayDb.query(
-    `SELECT patient_id AS StudentID, patient_name AS StudentName, added_at
-     FROM class_patients
-     WHERE class_id = ? AND center_id = ?
-     ORDER BY patient_name`,
+  mainDb.query(
+    `SELECT DISTINCT patients.PatientID AS StudentID, patients.PatientName AS StudentName
+     FROM patients
+     INNER JOIN therapists ON therapists.TherapistID = patients.TherapistID
+     WHERE patients.DepartmentID = ? AND therapists.CenterID = ? AND patients.IsAppCreated = 0
+     ORDER BY patients.PatientName`,
     [classId, centerId],
     (error, rows) => {
       if (error) return callBack(error.message);
       return callBack(null, rows);
-    }
-  );
-};
-
-exports.addStudentToClass = (classId, centerId, patientId, patientName, callBack) => {
-  railwayDb.query(
-    `INSERT IGNORE INTO class_patients (class_id, center_id, patient_id, patient_name) VALUES (?, ?, ?, ?)`,
-    [classId, centerId, patientId, patientName],
-    (error) => {
-      if (error) return callBack(error.message);
-      return callBack(null, "Student added");
-    }
-  );
-};
-
-exports.removeStudentFromClass = (classId, centerId, patientId, callBack) => {
-  railwayDb.query(
-    `DELETE FROM class_patients WHERE class_id = ? AND center_id = ? AND patient_id = ?`,
-    [classId, centerId, patientId],
-    (error, result) => {
-      if (error) return callBack(error.message);
-      if (result.affectedRows < 1) return callBack("Student not found in class", null, 404);
-      return callBack(null, "Student removed");
     }
   );
 };

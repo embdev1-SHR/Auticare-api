@@ -4,7 +4,7 @@ const { getCenterByApiKey } = require("../services/center.service");
 const {
   registerDevice, checkDevice, touchDevice,
   getClasses, setDepartmentAuth, getDepartmentCredentials, loginWithDepartmentAuth,
-  getClassStudents, addStudentToClass, removeStudentFromClass,
+  getClassStudents,
   logActivity, getActivitySummary, getHeatmapData, getCompletionTimeSeries,
 } = require("../services/external.service");
 
@@ -135,31 +135,13 @@ router.post("/classes/:classId/auth", verifyCenterToken, (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// CLASS STUDENTS  (center JWT required)
-// GET    /api/v1/external/classes/:classId/students
-// POST   /api/v1/external/classes/:classId/students  body: { PatientID, PatientName }
-// DELETE /api/v1/external/classes/:classId/students/:patientId
+// CLASS STUDENTS  (center JWT required) — auto-derived from patients' DepartmentID
+// GET /api/v1/external/classes/:classId/students
 // ══════════════════════════════════════════════════════════════════════════════
 router.get("/classes/:classId/students", verifyCenterToken, (req, res) => {
   getClassStudents(req.params.classId, req.centerData.CenterID, (error, rows) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true, results: rows });
-  });
-});
-
-router.post("/classes/:classId/students", verifyCenterToken, (req, res) => {
-  const { PatientID, PatientName } = req.body;
-  if (!PatientID || !PatientName) return res.status(400).send({ success: false, errors: { message: "PatientID and PatientName required" } });
-  addStudentToClass(req.params.classId, req.centerData.CenterID, PatientID, PatientName, (error, msg, status) => {
-    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
-    return res.status(200).send({ success: true, results: { message: msg } });
-  });
-});
-
-router.delete("/classes/:classId/students/:patientId", verifyCenterToken, (req, res) => {
-  removeStudentFromClass(req.params.classId, req.centerData.CenterID, req.params.patientId, (error, msg, status) => {
-    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
-    return res.status(200).send({ success: true, results: { message: msg } });
   });
 });
 

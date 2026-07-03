@@ -3,7 +3,7 @@ const { pageAuthorisation } = require("../middleware/authorization");
 const { getCenterByUserId } = require("../services/center.service");
 const {
   getClasses, setDepartmentAuth, getDepartmentCredentials,
-  getClassStudents, addStudentToClass, removeStudentFromClass,
+  getClassStudents,
   getActivitySummary, getHeatmapData, getCompletionTimeSeries,
 } = require("../services/external.service");
 
@@ -48,27 +48,11 @@ router.post("/classes/:classId/auth", pageAuthorisation(["SuperAdmin", "ClientAd
   });
 });
 
-// ── Students ─────────────────────────────────────────────────────────────────
+// ── Students ── auto-derived from patients assigned to the department ──────────
 router.get("/classes/:classId/students", pageAuthorisation(ALLOWED_ROLES), resolveCenterID, (req, res) => {
   getClassStudents(req.params.classId, req.resolvedCenterID, (error, rows) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true, results: { data: rows } });
-  });
-});
-
-router.post("/classes/:classId/students", pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center"]), resolveCenterID, (req, res) => {
-  const { PatientID, PatientName } = req.body;
-  if (!PatientID || !PatientName) return res.status(400).send({ success: false, errors: { message: "PatientID and PatientName required" } });
-  addStudentToClass(req.params.classId, req.resolvedCenterID, PatientID, PatientName, (error, msg, status) => {
-    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
-    return res.status(200).send({ success: true, results: { message: msg } });
-  });
-});
-
-router.delete("/classes/:classId/students/:patientId", pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center"]), resolveCenterID, (req, res) => {
-  removeStudentFromClass(req.params.classId, req.resolvedCenterID, req.params.patientId, (error, msg, status) => {
-    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
-    return res.status(200).send({ success: true, results: { message: msg } });
   });
 });
 
