@@ -9,6 +9,7 @@ const {
   centerSearch,
   regenerateApiKey,
   generateApiKeys,
+  setDeviceLimit,
 } = require("../controllers/center.controller");
 const { validateRequestSchema } = require("../middleware/validateRequestSchema");
 const { pageAuthorisation } = require("../middleware/authorization");
@@ -625,6 +626,7 @@ router.delete("/:CenterID", pageAuthorisation(["SuperAdmin", "ClientAdmin"]), ce
 
 router.post("/generate-api-keys", pageAuthorisation(["SuperAdmin"]), generateApiKeys);
 router.post("/:CenterID/regenerate-api-key", pageAuthorisation(["SuperAdmin"]), regenerateApiKey);
+router.put("/:CenterID/device-limit", pageAuthorisation(["SuperAdmin"]), setDeviceLimit);
 
 module.exports = router;
 

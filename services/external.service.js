@@ -5,18 +5,53 @@ const { compare, hash } = require("bcrypt");
 // ── Device registration ───────────────────────────────────────────────────────
 
 exports.registerDevice = (centerId, deviceId, centerName, callBack) => {
+  // Is this device already known?
   railwayDb.query(
-    `INSERT INTO device_registrations (device_id, center_id, center_name, last_seen_at)
-     VALUES (?, ?, ?, NOW())
-     ON DUPLICATE KEY UPDATE
-       last_seen_at = IF(center_id = VALUES(center_id), NOW(), (SELECT 1 FROM (SELECT 1) t))`,
-    [deviceId, centerId, centerName],
-    (error) => {
-      if (error) {
-        if (error.code === "ER_DUP_ENTRY") return callBack("CONFLICT");
-        return callBack(error.message);
+    `SELECT center_id FROM device_registrations WHERE device_id = ?`,
+    [deviceId],
+    (e0, existing) => {
+      if (e0) return callBack(e0.message);
+
+      if (existing.length) {
+        // Device already registered — must belong to the same center.
+        if (Number(existing[0].center_id) !== Number(centerId)) return callBack("CONFLICT");
+        railwayDb.query(
+          `UPDATE device_registrations SET last_seen_at = NOW() WHERE device_id = ?`,
+          [deviceId],
+          (e1) => (e1 ? callBack(e1.message) : callBack(null, "ok"))
+        );
+        return;
       }
-      return callBack(null, "ok");
+
+      // New device — enforce the center's device limit (default 1).
+      mainDb.query(
+        `SELECT COALESCE(MaxDevices, 1) AS MaxDevices FROM centers WHERE CenterID = ?`,
+        [centerId],
+        (e2, cRows) => {
+          if (e2) return callBack(e2.message);
+          const maxDevices = cRows.length ? cRows[0].MaxDevices : 1;
+          railwayDb.query(
+            `SELECT COUNT(*) AS cnt FROM device_registrations WHERE center_id = ?`,
+            [centerId],
+            (e3, cntRows) => {
+              if (e3) return callBack(e3.message);
+              if (cntRows[0].cnt >= maxDevices) return callBack("LIMIT");
+              railwayDb.query(
+                `INSERT INTO device_registrations (device_id, center_id, center_name, last_seen_at)
+                 VALUES (?, ?, ?, NOW())`,
+                [deviceId, centerId, centerName],
+                (e4) => {
+                  if (e4) {
+                    if (e4.code === "ER_DUP_ENTRY") return callBack("CONFLICT");
+                    return callBack(e4.message);
+                  }
+                  return callBack(null, "ok");
+                }
+              );
+            }
+          );
+        }
+      );
     }
   );
 };
@@ -284,6 +319,45 @@ exports.getSessionDetail = (sessionId, centerId, callBack) => {
           return callBack(null, { session: sRows[0], events });
         }
       );
+    }
+  );
+};
+
+// Resolve a therapist's CenterID from their login UserID.
+exports.getCenterByTherapistUserId = (userId, callBack) => {
+  mainDb.query(
+    `SELECT CenterID FROM therapists WHERE UserID = ? AND Status = 1 LIMIT 1`,
+    [userId],
+    (error, rows) => {
+      if (error) return callBack(error.message);
+      return callBack(null, rows);
+    }
+  );
+};
+
+// Per-patient session history with per-session aggregates, for the trend
+// report (compare a session against previous ones).
+exports.getPatientSessions = (centerId, patientId, limit, callBack) => {
+  railwayDb.query(
+    `SELECT s.session_id, s.login_at, s.ended_at, s.status, s.session_mode,
+            TIMESTAMPDIFF(SECOND, s.login_at, COALESCE(s.ended_at, s.last_heartbeat)) AS duration_seconds,
+            (SELECT COUNT(*) FROM blueroom_events e
+               WHERE e.session_id = s.session_id AND e.event_type = 'touch') AS touch_count,
+            (SELECT COUNT(*) FROM blueroom_events e
+               WHERE e.session_id = s.session_id AND e.event_type = 'button') AS prompt_count,
+            (SELECT COUNT(DISTINCT e.game_key) FROM blueroom_events e
+               WHERE e.session_id = s.session_id AND e.event_type = 'scenario_start'
+                 AND e.game_key IS NOT NULL AND e.game_key <> 'menu') AS activity_count,
+            (SELECT ROUND(AVG(e.completion_pct), 0) FROM blueroom_events e
+               WHERE e.session_id = s.session_id AND e.completion_pct IS NOT NULL) AS avg_completion
+     FROM blueroom_sessions s
+     WHERE s.center_id = ? AND s.patient_id = ?
+     ORDER BY s.login_at DESC
+     LIMIT ?`,
+    [centerId, patientId, parseInt(limit || 20, 10)],
+    (error, rows) => {
+      if (error) return callBack(error.message);
+      return callBack(null, rows);
     }
   );
 };

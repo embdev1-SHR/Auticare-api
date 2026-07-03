@@ -66,7 +66,8 @@ router.post("/device-register", (req, res) => {
   if (!CenterID || !deviceId) return res.status(400).send({ success: false, errors: { message: "CenterID and deviceId required" } });
 
   registerDevice(CenterID, deviceId, CenterName || "", (error) => {
-    if (error === "CONFLICT") return res.status(409).send({ success: false, errors: { message: "This center or device is already bound to another machine." } });
+    if (error === "CONFLICT") return res.status(409).send({ success: false, errors: { message: "This device is already bound to another center." } });
+    if (error === "LIMIT") return res.status(409).send({ success: false, errors: { message: "This center has reached its device limit. Ask an admin to raise it." } });
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true, results: { message: "Device registered" } });
   });

@@ -6,14 +6,23 @@ const {
   getClassStudents,
   getActivitySummary, getHeatmapData, getCompletionTimeSeries,
   getLiveSessions, getSessionDetail,
+  getCenterByTherapistUserId, getPatientSessions,
 } = require("../services/external.service");
 
 const ALLOWED_ROLES = ["SuperAdmin", "ClientAdmin", "Center", "Therapist"];
 
+// Center users derive CenterID from their UserID; therapists from theirs;
+// admins pass ?centerID=X.
 function resolveCenterID(req, res, next) {
   if (req.userData.RoleName === "Center") {
     getCenterByUserId(req.userData.UserID, (error, rows) => {
       if (error || !rows.length) return res.status(400).send({ success: false, errors: { message: "Center not found for this user" } });
+      req.resolvedCenterID = rows[0].CenterID;
+      next();
+    });
+  } else if (req.userData.RoleName === "Therapist") {
+    getCenterByTherapistUserId(req.userData.UserID, (error, rows) => {
+      if (error || !rows.length) return res.status(400).send({ success: false, errors: { message: "Center not found for this therapist" } });
       req.resolvedCenterID = rows[0].CenterID;
       next();
     });
@@ -69,6 +78,14 @@ router.get("/sessions/:sessionId", pageAuthorisation(ALLOWED_ROLES), resolveCent
   getSessionDetail(req.params.sessionId, req.resolvedCenterID, (error, data, status) => {
     if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true, results: { data } });
+  });
+});
+
+// Per-patient session history (for the trend report — compare to previous).
+router.get("/patients/:patientId/sessions", pageAuthorisation(ALLOWED_ROLES), resolveCenterID, (req, res) => {
+  getPatientSessions(req.resolvedCenterID, req.params.patientId, req.query.limit, (error, rows) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true, results: { data: rows } });
   });
 });
 
