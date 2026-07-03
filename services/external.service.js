@@ -39,21 +39,33 @@ exports.touchDevice = (deviceId) => {
 // ── Classes (departments from main Auticare DB) ───────────────────────────────
 
 exports.getClasses = (centerId, callBack) => {
-  // Departments visible to a center = those created by the center itself,
-  // by the client that owns the center, or by any therapist under the center.
-  // Mirrors the Departments-list visibility rules but keyed by CenterID.
+  // Mirror the exact department visibility used by the Departments page
+  // (departmentListByCenterUserID) but keyed by CenterID instead of the
+  // center's login UserID: departments created by the owning client, by the
+  // center itself, by a therapist under the center, plus Default departments.
   mainDb.query(
-    `SELECT d.DepartmentID AS ClassID, d.DepartmentName AS ClassName
-     FROM departments d
-     WHERE d.Status = 1 AND (
-       d.Create_By = (SELECT UserID FROM centers WHERE CenterID = ?)
-       OR d.Create_By = (
-         SELECT cl.UserID FROM clients cl
-         INNER JOIN centers ce ON ce.ClientID = cl.ClientID
-         WHERE ce.CenterID = ?
-       )
-       OR d.Create_By IN (SELECT UserID FROM therapists WHERE CenterID = ?)
-     )
+    `SELECT DISTINCT d.DepartmentID AS ClassID, d.DepartmentName AS ClassName FROM (
+       SELECT departments.DepartmentID, departments.DepartmentName
+         FROM clients
+         INNER JOIN centers ON centers.ClientID = clients.ClientID
+         INNER JOIN departments ON clients.UserID = departments.Create_By
+         WHERE centers.CenterID = ? AND departments.Status = 1
+       UNION
+       SELECT departments.DepartmentID, departments.DepartmentName
+         FROM centers
+         INNER JOIN departments ON centers.UserID = departments.Create_By
+         WHERE centers.CenterID = ? AND departments.Status = 1
+       UNION
+       SELECT departments.DepartmentID, departments.DepartmentName
+         FROM centers
+         INNER JOIN therapists ON therapists.CenterID = centers.CenterID
+         INNER JOIN departments ON therapists.UserID = departments.Create_By
+         WHERE centers.CenterID = ? AND departments.Status = 1
+       UNION
+       SELECT DepartmentID, DepartmentName
+         FROM departments
+         WHERE DepartmentType = 'Default' AND Status = 1
+     ) d
      ORDER BY d.DepartmentName`,
     [centerId, centerId, centerId],
     (error, rows) => {
@@ -89,7 +101,14 @@ exports.getDepartmentCredentials = (centerId, callBack) => {
     `SELECT department_id, username FROM department_passwords WHERE center_id = ?`,
     [centerId],
     (error, rows) => {
-      if (error) return callBack(error.message);
+      if (error) {
+        // If the username column hasn't been added yet, treat as "none set"
+        // rather than failing the whole dashboard section.
+        if (error.code === "ER_BAD_FIELD_ERROR" || error.code === "ER_NO_SUCH_TABLE") {
+          return callBack(null, []);
+        }
+        return callBack(error.message);
+      }
       return callBack(null, rows);
     }
   );
