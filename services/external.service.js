@@ -39,13 +39,23 @@ exports.touchDevice = (deviceId) => {
 // ── Classes (departments from main Auticare DB) ───────────────────────────────
 
 exports.getClasses = (centerId, callBack) => {
+  // Departments visible to a center = those created by the center itself,
+  // by the client that owns the center, or by any therapist under the center.
+  // Mirrors the Departments-list visibility rules but keyed by CenterID.
   mainDb.query(
     `SELECT d.DepartmentID AS ClassID, d.DepartmentName AS ClassName
      FROM departments d
-     INNER JOIN centers c ON c.UserID = d.Create_By
-     WHERE c.CenterID = ? AND d.Status = 1
+     WHERE d.Status = 1 AND (
+       d.Create_By = (SELECT UserID FROM centers WHERE CenterID = ?)
+       OR d.Create_By = (
+         SELECT cl.UserID FROM clients cl
+         INNER JOIN centers ce ON ce.ClientID = cl.ClientID
+         WHERE ce.CenterID = ?
+       )
+       OR d.Create_By IN (SELECT UserID FROM therapists WHERE CenterID = ?)
+     )
      ORDER BY d.DepartmentName`,
-    [centerId],
+    [centerId, centerId, centerId],
     (error, rows) => {
       if (error) return callBack(error.message);
       return callBack(null, rows);
