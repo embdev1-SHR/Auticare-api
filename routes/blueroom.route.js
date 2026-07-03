@@ -2,16 +2,13 @@ const router = require("express").Router();
 const { pageAuthorisation } = require("../middleware/authorization");
 const { getCenterByUserId } = require("../services/center.service");
 const {
-  getClasses, setDepartmentPassword,
-  verifyClassPassword, getClassStudents, addStudentToClass, removeStudentFromClass,
+  getClasses, setDepartmentAuth, getDepartmentCredentials,
+  getClassStudents, addStudentToClass, removeStudentFromClass,
   getActivitySummary, getHeatmapData, getCompletionTimeSeries,
 } = require("../services/external.service");
 
 const ALLOWED_ROLES = ["SuperAdmin", "ClientAdmin", "Center", "Therapist"];
 
-// Resolves CenterID for the request.
-// Center users: derived from their own UserID via centers table.
-// ClientAdmin / SuperAdmin / Therapist: must pass ?centerID=X or body.centerID.
 function resolveCenterID(req, res, next) {
   if (req.userData.RoleName === "Center") {
     getCenterByUserId(req.userData.UserID, (error, rows) => {
@@ -35,10 +32,17 @@ router.get("/classes", pageAuthorisation(ALLOWED_ROLES), resolveCenterID, (req, 
   });
 });
 
-router.post("/classes/:classId/password", pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center"]), resolveCenterID, (req, res) => {
-  const { password } = req.body;
-  if (!password) return res.status(400).send({ success: false, errors: { message: "password required" } });
-  setDepartmentPassword(req.resolvedCenterID, req.params.classId, password, (error, msg) => {
+router.get("/classes/credentials", pageAuthorisation(ALLOWED_ROLES), resolveCenterID, (req, res) => {
+  getDepartmentCredentials(req.resolvedCenterID, (error, rows) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true, results: { data: rows } });
+  });
+});
+
+router.post("/classes/:classId/auth", pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center"]), resolveCenterID, (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).send({ success: false, errors: { message: "username and password required" } });
+  setDepartmentAuth(req.resolvedCenterID, req.params.classId, username, password, (error, msg) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true, results: { message: msg } });
   });

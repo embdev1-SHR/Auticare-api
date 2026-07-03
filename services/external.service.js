@@ -53,34 +53,58 @@ exports.getClasses = (centerId, callBack) => {
   );
 };
 
-// Set (or update) the Blueroom password for a department. Passwords are stored
-// in Railway so the main Auticare DB is not modified.
-exports.setDepartmentPassword = (centerId, departmentId, password, callBack) => {
+// Set (or update) the Blueroom username + password for a department.
+exports.setDepartmentAuth = (centerId, departmentId, username, password, callBack) => {
   hash(password, 10, (err, hashed) => {
     if (err) return callBack(err.message);
     railwayDb.query(
-      `INSERT INTO department_passwords (department_id, center_id, password)
-       VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE password = VALUES(password), updated_at = NOW()`,
-      [departmentId, centerId, hashed],
+      `INSERT INTO department_passwords (department_id, center_id, username, password)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE username = VALUES(username), password = VALUES(password), updated_at = NOW()`,
+      [departmentId, centerId, username, hashed],
       (error) => {
-        if (error) return callBack(error.message);
-        return callBack(null, "Password set");
+        if (error) {
+          if (error.code === "ER_DUP_ENTRY") return callBack("This username is already used by another department.");
+          return callBack(error.message);
+        }
+        return callBack(null, "Credentials set");
       }
     );
   });
 };
 
-exports.verifyClassPassword = (classId, centerId, password, callBack) => {
+// Returns configured usernames per department for this center (for dashboard display).
+exports.getDepartmentCredentials = (centerId, callBack) => {
   railwayDb.query(
-    `SELECT password FROM department_passwords WHERE department_id = ? AND center_id = ?`,
-    [classId, centerId],
+    `SELECT department_id, username FROM department_passwords WHERE center_id = ?`,
+    [centerId],
     (error, rows) => {
       if (error) return callBack(error.message);
-      if (!rows.length) return callBack("No password set for this class. Ask your admin to set one.", null, 404);
+      return callBack(null, rows);
+    }
+  );
+};
+
+// Department login — validates username+password, returns department info.
+exports.loginWithDepartmentAuth = (centerId, username, password, callBack) => {
+  railwayDb.query(
+    `SELECT department_id, password FROM department_passwords WHERE center_id = ? AND username = ?`,
+    [centerId, username],
+    (error, rows) => {
+      if (error) return callBack(error.message);
+      if (!rows.length) return callBack("Invalid username or password.", null, 401);
       compare(password, rows[0].password, (err, match) => {
         if (err) return callBack(err.message);
-        return callBack(null, match);
+        if (!match) return callBack("Invalid username or password.", null, 401);
+        mainDb.query(
+          `SELECT DepartmentID, DepartmentName FROM departments WHERE DepartmentID = ? AND Status = 1`,
+          [rows[0].department_id],
+          (err2, depts) => {
+            if (err2) return callBack(err2.message);
+            if (!depts.length) return callBack("Department not found.", null, 404);
+            return callBack(null, { DepartmentID: depts[0].DepartmentID, DepartmentName: depts[0].DepartmentName });
+          }
+        );
       });
     }
   );
@@ -150,7 +174,7 @@ exports.logActivity = (payload, callBack) => {
   );
 };
 
-// ── Activity queries (for Blueroom dashboard) ─────────────────────────────────
+// ── Activity queries ──────────────────────────────────────────────────────────
 
 exports.getActivitySummary = (centerId, filters, callBack) => {
   const { patientId, classId, from, to, limit = 500 } = filters;

@@ -1,12 +1,10 @@
 const router = require("express").Router();
 const { verify, sign } = require("jsonwebtoken");
-const { compare } = require("bcrypt");
 const { getCenterByApiKey } = require("../services/center.service");
-const { getUserByEmailId } = require("../services/users.service");
 const {
   registerDevice, checkDevice, touchDevice,
-  getClasses, setDepartmentPassword,
-  verifyClassPassword, getClassStudents, addStudentToClass, removeStudentFromClass,
+  getClasses, setDepartmentAuth, getDepartmentCredentials, loginWithDepartmentAuth,
+  getClassStudents, addStudentToClass, removeStudentFromClass,
   logActivity, getActivitySummary, getHeatmapData, getCompletionTimeSeries,
 } = require("../services/external.service");
 
@@ -85,34 +83,33 @@ router.get("/device-check", (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// OPERATOR LOGIN  (center JWT required)
+// DEPARTMENT LOGIN  (center JWT required)
 // POST /api/v1/external/login   body: { username, password }
+// Returns the matched department so the Electron can skip class selection.
 // ══════════════════════════════════════════════════════════════════════════════
 router.post("/login", verifyCenterToken, (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).send({ success: false, errors: { message: "username and password required" } });
 
-  getUserByEmailId(username, (error, results) => {
-    if (error) return res.status(500).send({ success: false, errors: { message: error } });
-    if (!results || !results.length) return res.status(401).send({ success: false, errors: { message: "Invalid credentials" } });
-
-    const user = results[0];
-    compare(password, user.Password, (err, match) => {
-      if (err || !match) return res.status(401).send({ success: false, errors: { message: "Invalid credentials" } });
-      return res.status(200).send({
-        success: true,
-        results: { operator: { UserID: user.UserID, UserName: user.UserName, EmailId: user.EmailId, RoleId: user.RoleId } }
-      });
+  loginWithDepartmentAuth(req.centerData.CenterID, username, password, (error, dept, status) => {
+    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({
+      success: true,
+      results: {
+        department: {
+          DepartmentID: dept.DepartmentID,
+          DepartmentName: dept.DepartmentName,
+        }
+      }
     });
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// CLASSES  (center JWT required)
-// Classes = Departments from the main Auticare DB. Read-only from Electron.
+// CLASSES (departments)  (center JWT required)
 // GET  /api/v1/external/classes
-// POST /api/v1/external/classes/:classId/password   body: { password }
-// POST /api/v1/external/classes/verify              body: { ClassID, password }
+// GET  /api/v1/external/classes/credentials
+// POST /api/v1/external/classes/:classId/auth   body: { username, password }
 // ══════════════════════════════════════════════════════════════════════════════
 router.get("/classes", verifyCenterToken, (req, res) => {
   getClasses(req.centerData.CenterID, (error, rows) => {
@@ -121,22 +118,19 @@ router.get("/classes", verifyCenterToken, (req, res) => {
   });
 });
 
-router.post("/classes/:classId/password", verifyCenterToken, (req, res) => {
-  const { password } = req.body;
-  if (!password) return res.status(400).send({ success: false, errors: { message: "password required" } });
-  setDepartmentPassword(req.centerData.CenterID, req.params.classId, password, (error, msg) => {
+router.get("/classes/credentials", verifyCenterToken, (req, res) => {
+  getDepartmentCredentials(req.centerData.CenterID, (error, rows) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
-    return res.status(200).send({ success: true, results: { message: msg } });
+    return res.status(200).send({ success: true, results: rows });
   });
 });
 
-router.post("/classes/verify", verifyCenterToken, (req, res) => {
-  const { ClassID, password } = req.body;
-  if (!ClassID || !password) return res.status(400).send({ success: false, errors: { message: "ClassID and password required" } });
-  verifyClassPassword(ClassID, req.centerData.CenterID, password, (error, match, status) => {
-    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
-    if (!match) return res.status(401).send({ success: false, errors: { message: "Wrong class password" } });
-    return res.status(200).send({ success: true, results: { message: "ok" } });
+router.post("/classes/:classId/auth", verifyCenterToken, (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).send({ success: false, errors: { message: "username and password required" } });
+  setDepartmentAuth(req.centerData.CenterID, req.params.classId, username, password, (error, msg) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true, results: { message: msg } });
   });
 });
 
@@ -170,7 +164,7 @@ router.delete("/classes/:classId/students/:patientId", verifyCenterToken, (req, 
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PATIENT ACTIVITY  (center JWT — Electron fires these)
+// PATIENT ACTIVITY  (center JWT)
 // POST /api/v1/external/patient-activity
 // ══════════════════════════════════════════════════════════════════════════════
 router.post("/patient-activity", verifyCenterToken, (req, res) => {
@@ -188,19 +182,13 @@ router.post("/patient-activity", verifyCenterToken, (req, res) => {
     ScenarioID: data.scenarioId, CompletionPct: data.completionPct,
     DurationMs: data.durationMs, GameKey: data.gameKey,
   }, (error) => {
-    if (error) {
-      console.error("[blueroom-event]", error);
-      return res.status(500).send({ success: false, errors: { message: error } });
-    }
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true });
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// BLUEROOM ANALYTICS  (center JWT — Blueroom dashboard reads these)
-// GET /api/v1/external/blueroom/activity    ?patientId&classId&from&to&limit
-// GET /api/v1/external/blueroom/heatmap     ?patientId&classId&from&to
-// GET /api/v1/external/blueroom/timeseries  ?patientId&classId&from&to
+// BLUEROOM ANALYTICS  (center JWT)
 // ══════════════════════════════════════════════════════════════════════════════
 router.get("/blueroom/activity", verifyCenterToken, (req, res) => {
   getActivitySummary(req.centerData.CenterID, req.query, (error, rows) => {
