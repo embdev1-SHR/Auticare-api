@@ -2,7 +2,7 @@ const router = require("express").Router();
 const { pageAuthorisation } = require("../middleware/authorization");
 const { getCenterByUserId } = require("../services/center.service");
 const {
-  getClasses, createClass, deleteClass,
+  getClasses, setDepartmentPassword,
   verifyClassPassword, getClassStudents, addStudentToClass, removeStudentFromClass,
   getActivitySummary, getHeatmapData, getCompletionTimeSeries,
 } = require("../services/external.service");
@@ -27,7 +27,7 @@ function resolveCenterID(req, res, next) {
   }
 }
 
-// ── Classes ──────────────────────────────────────────────────────────────────
+// ── Classes (departments) ─────────────────────────────────────────────────────
 router.get("/classes", pageAuthorisation(ALLOWED_ROLES), resolveCenterID, (req, res) => {
   getClasses(req.resolvedCenterID, (error, rows) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
@@ -35,18 +35,11 @@ router.get("/classes", pageAuthorisation(ALLOWED_ROLES), resolveCenterID, (req, 
   });
 });
 
-router.post("/classes", pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center"]), resolveCenterID, (req, res) => {
-  const { ClassName, password } = req.body;
-  if (!ClassName || !password) return res.status(400).send({ success: false, errors: { message: "ClassName and password required" } });
-  createClass(req.resolvedCenterID, ClassName, password, (error, result) => {
+router.post("/classes/:classId/password", pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center"]), resolveCenterID, (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).send({ success: false, errors: { message: "password required" } });
+  setDepartmentPassword(req.resolvedCenterID, req.params.classId, password, (error, msg) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
-    return res.status(201).send({ success: true, results: { data: result } });
-  });
-});
-
-router.delete("/classes/:classId", pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center"]), resolveCenterID, (req, res) => {
-  deleteClass(req.params.classId, req.resolvedCenterID, (error, msg, status) => {
-    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true, results: { message: msg } });
   });
 });

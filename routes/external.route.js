@@ -5,7 +5,7 @@ const { getCenterByApiKey } = require("../services/center.service");
 const { getUserByEmailId } = require("../services/users.service");
 const {
   registerDevice, checkDevice, touchDevice,
-  getClasses, createClass, deleteClass,
+  getClasses, setDepartmentPassword,
   verifyClassPassword, getClassStudents, addStudentToClass, removeStudentFromClass,
   logActivity, getActivitySummary, getHeatmapData, getCompletionTimeSeries,
 } = require("../services/external.service");
@@ -109,10 +109,10 @@ router.post("/login", verifyCenterToken, (req, res) => {
 
 // ══════════════════════════════════════════════════════════════════════════════
 // CLASSES  (center JWT required)
-// GET    /api/v1/external/classes
-// POST   /api/v1/external/classes              body: { ClassName, password }
-// DELETE /api/v1/external/classes/:classId
-// POST   /api/v1/external/classes/verify       body: { ClassID, password }
+// Classes = Departments from the main Auticare DB. Read-only from Electron.
+// GET  /api/v1/external/classes
+// POST /api/v1/external/classes/:classId/password   body: { password }
+// POST /api/v1/external/classes/verify              body: { ClassID, password }
 // ══════════════════════════════════════════════════════════════════════════════
 router.get("/classes", verifyCenterToken, (req, res) => {
   getClasses(req.centerData.CenterID, (error, rows) => {
@@ -121,18 +121,11 @@ router.get("/classes", verifyCenterToken, (req, res) => {
   });
 });
 
-router.post("/classes", verifyCenterToken, (req, res) => {
-  const { ClassName, password } = req.body;
-  if (!ClassName || !password) return res.status(400).send({ success: false, errors: { message: "ClassName and password required" } });
-  createClass(req.centerData.CenterID, ClassName, password, (error, result) => {
+router.post("/classes/:classId/password", verifyCenterToken, (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).send({ success: false, errors: { message: "password required" } });
+  setDepartmentPassword(req.centerData.CenterID, req.params.classId, password, (error, msg) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
-    return res.status(201).send({ success: true, results: result });
-  });
-});
-
-router.delete("/classes/:classId", verifyCenterToken, (req, res) => {
-  deleteClass(req.params.classId, req.centerData.CenterID, (error, msg, status) => {
-    if (error) return res.status(status || 500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true, results: { message: msg } });
   });
 });

@@ -1,18 +1,17 @@
-const db = require("../config/railway-db.config");
+const railwayDb = require("../config/railway-db.config");
+const mainDb = require("../config/db.config");
 const { compare, hash } = require("bcrypt");
 
 // ── Device registration ───────────────────────────────────────────────────────
 
 exports.registerDevice = (centerId, deviceId, centerName, callBack) => {
-  // Try to claim this center_id for this device_id.
-  // UNIQUE on both columns: fails with 409 if either is already bound elsewhere.
-  db.query(
+  railwayDb.query(
     `INSERT INTO device_registrations (device_id, center_id, center_name, last_seen_at)
      VALUES (?, ?, ?, NOW())
      ON DUPLICATE KEY UPDATE
        last_seen_at = IF(center_id = VALUES(center_id), NOW(), (SELECT 1 FROM (SELECT 1) t))`,
     [deviceId, centerId, centerName],
-    (error, result) => {
+    (error) => {
       if (error) {
         if (error.code === "ER_DUP_ENTRY") return callBack("CONFLICT");
         return callBack(error.message);
@@ -23,7 +22,7 @@ exports.registerDevice = (centerId, deviceId, centerName, callBack) => {
 };
 
 exports.checkDevice = (deviceId, callBack) => {
-  db.query(
+  railwayDb.query(
     `SELECT center_id, center_name, activated_at FROM device_registrations WHERE device_id = ?`,
     [deviceId],
     (error, rows) => {
@@ -34,14 +33,18 @@ exports.checkDevice = (deviceId, callBack) => {
 };
 
 exports.touchDevice = (deviceId) => {
-  db.query(`UPDATE device_registrations SET last_seen_at = NOW() WHERE device_id = ?`, [deviceId]);
+  railwayDb.query(`UPDATE device_registrations SET last_seen_at = NOW() WHERE device_id = ?`, [deviceId]);
 };
 
-// ── Classes ──────────────────────────────────────────────────────────────────
+// ── Classes (departments from main Auticare DB) ───────────────────────────────
 
 exports.getClasses = (centerId, callBack) => {
-  db.query(
-    `SELECT id AS ClassID, class_name AS ClassName, created_at FROM classes WHERE center_id = ? ORDER BY class_name`,
+  mainDb.query(
+    `SELECT d.DepartmentID AS ClassID, d.DepartmentName AS ClassName
+     FROM departments d
+     INNER JOIN centers c ON c.UserID = d.Create_By
+     WHERE c.CenterID = ? AND d.Status = 1
+     ORDER BY d.DepartmentName`,
     [centerId],
     (error, rows) => {
       if (error) return callBack(error.message);
@@ -50,39 +53,31 @@ exports.getClasses = (centerId, callBack) => {
   );
 };
 
-exports.createClass = (centerId, className, password, callBack) => {
+// Set (or update) the Blueroom password for a department. Passwords are stored
+// in Railway so the main Auticare DB is not modified.
+exports.setDepartmentPassword = (centerId, departmentId, password, callBack) => {
   hash(password, 10, (err, hashed) => {
     if (err) return callBack(err.message);
-    db.query(
-      `INSERT INTO classes (center_id, class_name, password) VALUES (?, ?, ?)`,
-      [centerId, className, hashed],
-      (error, result) => {
+    railwayDb.query(
+      `INSERT INTO department_passwords (department_id, center_id, password)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE password = VALUES(password), updated_at = NOW()`,
+      [departmentId, centerId, hashed],
+      (error) => {
         if (error) return callBack(error.message);
-        return callBack(null, { ClassID: result.insertId, ClassName: className });
+        return callBack(null, "Password set");
       }
     );
   });
 };
 
-exports.deleteClass = (classId, centerId, callBack) => {
-  db.query(
-    `DELETE FROM classes WHERE id = ? AND center_id = ?`,
-    [classId, centerId],
-    (error, result) => {
-      if (error) return callBack(error.message);
-      if (result.affectedRows < 1) return callBack("Class not found", null, 404);
-      return callBack(null, "Class deleted");
-    }
-  );
-};
-
 exports.verifyClassPassword = (classId, centerId, password, callBack) => {
-  db.query(
-    `SELECT password FROM classes WHERE id = ? AND center_id = ?`,
+  railwayDb.query(
+    `SELECT password FROM department_passwords WHERE department_id = ? AND center_id = ?`,
     [classId, centerId],
     (error, rows) => {
       if (error) return callBack(error.message);
-      if (!rows.length) return callBack("Class not found", null, 404);
+      if (!rows.length) return callBack("No password set for this class. Ask your admin to set one.", null, 404);
       compare(password, rows[0].password, (err, match) => {
         if (err) return callBack(err.message);
         return callBack(null, match);
@@ -94,12 +89,11 @@ exports.verifyClassPassword = (classId, centerId, password, callBack) => {
 // ── Class students ────────────────────────────────────────────────────────────
 
 exports.getClassStudents = (classId, centerId, callBack) => {
-  db.query(
-    `SELECT cp.patient_id AS StudentID, cp.patient_name AS StudentName, cp.added_at
-     FROM class_patients cp
-     INNER JOIN classes c ON c.id = cp.class_id
-     WHERE cp.class_id = ? AND c.center_id = ?
-     ORDER BY cp.patient_name`,
+  railwayDb.query(
+    `SELECT patient_id AS StudentID, patient_name AS StudentName, added_at
+     FROM class_patients
+     WHERE class_id = ? AND center_id = ?
+     ORDER BY patient_name`,
     [classId, centerId],
     (error, rows) => {
       if (error) return callBack(error.message);
@@ -109,30 +103,19 @@ exports.getClassStudents = (classId, centerId, callBack) => {
 };
 
 exports.addStudentToClass = (classId, centerId, patientId, patientName, callBack) => {
-  // Verify class belongs to this center first
-  db.query(
-    `SELECT id FROM classes WHERE id = ? AND center_id = ?`,
-    [classId, centerId],
-    (error, rows) => {
+  railwayDb.query(
+    `INSERT IGNORE INTO class_patients (class_id, center_id, patient_id, patient_name) VALUES (?, ?, ?, ?)`,
+    [classId, centerId, patientId, patientName],
+    (error) => {
       if (error) return callBack(error.message);
-      if (!rows.length) return callBack("Class not found", null, 404);
-      db.query(
-        `INSERT IGNORE INTO class_patients (class_id, patient_id, patient_name) VALUES (?, ?, ?)`,
-        [classId, patientId, patientName],
-        (error2) => {
-          if (error2) return callBack(error2.message);
-          return callBack(null, "Student added");
-        }
-      );
+      return callBack(null, "Student added");
     }
   );
 };
 
 exports.removeStudentFromClass = (classId, centerId, patientId, callBack) => {
-  db.query(
-    `DELETE cp FROM class_patients cp
-     INNER JOIN classes c ON c.id = cp.class_id
-     WHERE cp.class_id = ? AND c.center_id = ? AND cp.patient_id = ?`,
+  railwayDb.query(
+    `DELETE FROM class_patients WHERE class_id = ? AND center_id = ? AND patient_id = ?`,
     [classId, centerId, patientId],
     (error, result) => {
       if (error) return callBack(error.message);
@@ -151,7 +134,7 @@ exports.logActivity = (payload, callBack) => {
     ScenarioID, CompletionPct, DurationMs, GameKey
   } = payload;
 
-  db.query(
+  railwayDb.query(
     `INSERT INTO blueroom_events
        (center_id, patient_id, class_id, session_mode, event_type,
         x, y, screen_width, screen_height, scenario_id,
@@ -179,7 +162,7 @@ exports.getActivitySummary = (centerId, filters, callBack) => {
   if (to)        { where += " AND ts <= ?";         params.push(to); }
   params.push(parseInt(limit, 10));
 
-  db.query(
+  railwayDb.query(
     `SELECT id, patient_id, class_id, session_mode, event_type,
             x, y, screen_width, screen_height, scenario_id,
             completion_pct, duration_ms, game_key, ts
@@ -202,7 +185,7 @@ exports.getHeatmapData = (centerId, filters, callBack) => {
   if (from)      { where += " AND ts >= ?";         params.push(from); }
   if (to)        { where += " AND ts <= ?";         params.push(to); }
 
-  db.query(
+  railwayDb.query(
     `SELECT x, y, screen_width, screen_height FROM blueroom_events ${where} LIMIT 5000`,
     params,
     (error, rows) => {
@@ -221,7 +204,7 @@ exports.getCompletionTimeSeries = (centerId, filters, callBack) => {
   if (from)      { where += " AND ts >= ?";         params.push(from); }
   if (to)        { where += " AND ts <= ?";         params.push(to); }
 
-  db.query(
+  railwayDb.query(
     `SELECT scenario_id, game_key, patient_id, completion_pct, duration_ms, ts
      FROM blueroom_events ${where}
      ORDER BY ts ASC LIMIT 2000`,
