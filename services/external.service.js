@@ -347,9 +347,14 @@ exports.saveScenarioShot = (sessionId, centerId, gameKey, imageUrl, callBack) =>
 };
 
 // Resolve a therapist's CenterID from their login UserID.
+// Status lives on login_users (not therapists), so join to check it.
 exports.getCenterByTherapistUserId = (userId, callBack) => {
   mainDb.query(
-    `SELECT CenterID FROM therapists WHERE UserID = ? AND Status = 1 LIMIT 1`,
+    `SELECT therapists.CenterID
+     FROM therapists
+     INNER JOIN login_users ON login_users.UserID = therapists.UserID
+     WHERE therapists.UserID = ? AND login_users.Status = 1
+     LIMIT 1`,
     [userId],
     (error, rows) => {
       if (error) return callBack(error.message);
