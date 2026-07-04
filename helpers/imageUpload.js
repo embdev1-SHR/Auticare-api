@@ -21,3 +21,28 @@ exports.upload = multer({
   }),
   limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
 });
+
+// Upload a base64 data-URL image (e.g. a scenario screenshot) to S3 and
+// return its public URL.
+exports.uploadBase64 = (dataUrl, keyPrefix) =>
+  new Promise((resolve, reject) => {
+    const m = /^data:(image\/[\w.+-]+);base64,(.+)$/.exec(dataUrl || "");
+    if (!m) return reject(new Error("Invalid image data"));
+    const contentType = m[1];
+    const buffer = Buffer.from(m[2], "base64");
+    const ext = (contentType.split("/")[1] || "jpg").replace(/[^\w]/g, "");
+    const key = `blueroom/${keyPrefix}-${Date.now()}.${ext}`;
+    s3.putObject(
+      {
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+      },
+      (err) => {
+        if (err) return reject(err);
+        const url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${key}`;
+        resolve(url);
+      }
+    );
+  });

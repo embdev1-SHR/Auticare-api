@@ -316,9 +316,32 @@ exports.getSessionDetail = (sessionId, centerId, callBack) => {
         [sessionId, centerId],
         (err2, events) => {
           if (err2) return callBack(err2.message);
-          return callBack(null, { session: sRows[0], events });
+          // Scenario background screenshots (game_key -> image_url) for the replay.
+          railwayDb.query(
+            `SELECT game_key, image_url FROM blueroom_shots WHERE session_id = ? AND center_id = ?`,
+            [sessionId, centerId],
+            (err3, shotRows) => {
+              const shots = {};
+              if (!err3) (shotRows || []).forEach((r) => { shots[r.game_key] = r.image_url; });
+              return callBack(null, { session: sRows[0], events, shots });
+            }
+          );
         }
       );
+    }
+  );
+};
+
+// Store (or replace) the background screenshot for a scenario in a session.
+exports.saveScenarioShot = (sessionId, centerId, gameKey, imageUrl, callBack) => {
+  railwayDb.query(
+    `INSERT INTO blueroom_shots (session_id, game_key, center_id, image_url)
+     VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE image_url = VALUES(image_url), ts = NOW()`,
+    [sessionId, gameKey, centerId, imageUrl],
+    (error) => {
+      if (error) return callBack(error.message);
+      return callBack(null, "ok");
     }
   );
 };

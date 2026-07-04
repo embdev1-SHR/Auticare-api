@@ -62,7 +62,7 @@ const { pageAuthorisation } = require("../middleware/authorization");
  *         "500":
  *           description: Internal server error
  */
-router.get("/", pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center", "Patient"]), therapistList);
+router.get("/", pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center", "Patient", "Therapist"]), therapistList);
 
 /**
  * @swagger

@@ -23,6 +23,7 @@ const {
   therapistSearchForPublic,
   therapistCountByClientID,
   therapistCountByCenterID,
+  therapistDetailsByUserID,
 } = require("../services/therapist.service");
 const { getClientByUserId } = require("../services/client.service");
 const {
@@ -103,6 +104,18 @@ exports.therapistList = (req, res) => {
     });
   } else if (data.RoleName == "Patient") {
     therapistListForPublic((error, results) => {
+      if (error) {
+        console.log(error);
+        return res.status(500).send({ success: false, errors: { message: error } });
+      }
+      return res.status(200).send({
+        success: true,
+        results: { data: results },
+      });
+    });
+  } else if (data.RoleName == "Therapist") {
+    // A therapist only needs their own record (e.g. to book appointments).
+    therapistDetailsByUserID(data.UserID, (error, results) => {
       if (error) {
         console.log(error);
         return res.status(500).send({ success: false, errors: { message: error } });

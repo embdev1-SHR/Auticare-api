@@ -6,8 +6,9 @@ const {
   getClasses, setDepartmentAuth, getDepartmentCredentials, loginWithDepartmentAuth,
   getClassStudents,
   logActivity, getActivitySummary, getHeatmapData, getCompletionTimeSeries,
-  startSession, heartbeatSession, endSession,
+  startSession, heartbeatSession, endSession, saveScenarioShot,
 } = require("../services/external.service");
+const { uploadBase64 } = require("../helpers/imageUpload");
 
 // ── Middleware: verify center JWT ────────────────────────────────────────────
 function verifyCenterToken(req, res, next) {
@@ -188,6 +189,23 @@ router.post("/session/end", verifyCenterToken, (req, res) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true });
   });
+});
+
+// Scenario screen replica — Electron posts a downscaled screenshot once per
+// scenario so the dashboard can draw touches over the real screen.
+router.post("/scenario-shot", verifyCenterToken, (req, res) => {
+  const { sessionId, gameKey, image } = req.body;
+  if (!sessionId || !gameKey || !image) {
+    return res.status(400).send({ success: false, errors: { message: "sessionId, gameKey and image required" } });
+  }
+  uploadBase64(image, `${req.centerData.CenterID}-${String(gameKey).replace(/[^\w-]/g, "")}`)
+    .then((url) => {
+      saveScenarioShot(sessionId, req.centerData.CenterID, gameKey, url, (error) => {
+        if (error) return res.status(500).send({ success: false, errors: { message: error } });
+        return res.status(200).send({ success: true, results: { image_url: url } });
+      });
+    })
+    .catch((e) => res.status(500).send({ success: false, errors: { message: e.message } }));
 });
 
 // ══════════════════════════════════════════════════════════════════════════════

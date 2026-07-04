@@ -43,7 +43,7 @@ const app = express();
 
 // Middleware
 app.use(helmet());
-app.use(express.json()); // parse json bodies in the request object
+app.use(express.json({ limit: "6mb" })); // parse json bodies (raised for base64 scenario screenshots)
 app.use(
   cors({
     origin: "*",
