@@ -9,7 +9,7 @@ const railwayDb = createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   connectionLimit: 20,
-  ssl: { rejectUnauthorized: false },
+  ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined,
 });
 
 module.exports = railwayDb;
