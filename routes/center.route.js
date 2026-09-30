@@ -10,6 +10,8 @@ const {
   regenerateApiKey,
   generateApiKeys,
   setDeviceLimit,
+  viewDevLicence,
+  regenerateDevLicenceKey,
 } = require("../controllers/center.controller");
 const { validateRequestSchema } = require("../middleware/validateRequestSchema");
 const { pageAuthorisation } = require("../middleware/authorization");
@@ -624,6 +626,9 @@ router.put(
  */
 router.delete("/:CenterID", pageAuthorisation(["SuperAdmin", "ClientAdmin"]), centerDelete);
 
+// Developer licence - the Auticare admin account only (see the controller).
+router.get("/dev-licence", pageAuthorisation(["SuperAdmin"]), viewDevLicence);
+router.post("/dev-licence/regenerate", pageAuthorisation(["SuperAdmin"]), regenerateDevLicenceKey);
 router.post("/generate-api-keys", pageAuthorisation(["SuperAdmin"]), generateApiKeys);
 router.post("/:CenterID/regenerate-api-key", pageAuthorisation(["SuperAdmin"]), regenerateApiKey);
 router.put("/:CenterID/device-limit", pageAuthorisation(["SuperAdmin"]), setDeviceLimit);

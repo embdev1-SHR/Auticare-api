@@ -17,7 +17,11 @@ exports.registerDevice = (centerId, deviceId, centerName, callBack) => {
     [centerId],
     (eLimit, cRows) => {
       if (eLimit) return callBack(eLimit.message);
-      const maxDevices = cRows.length ? Number(cRows[0].MaxDevices) : 1;
+      /* CenterID 0 is the Auticare developer licence, which is not a row in
+         `centers` at all - so an empty result there means unlimited, not the
+         default of one. Any other unknown centre still falls back to 1. */
+      const isDevCenter = Number(centerId) === 0;
+      var maxDevices = isDevCenter ? DEV_LICENCE : (cRows.length ? Number(cRows[0].MaxDevices) : 1);
       const isDevLicence = maxDevices === DEV_LICENCE;
 
       // Is this device already known?

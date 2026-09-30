@@ -1,4 +1,5 @@
 const router = require("express").Router();
+const { matchDevLicence, DEV_CENTER_ID } = require("../services/devLicence.service");
 const { verify, sign } = require("jsonwebtoken");
 const { getCenterByApiKey } = require("../services/center.service");
 const {
@@ -30,6 +31,20 @@ router.post("/center-auth", (req, res) => {
   const { CenterApiKey } = req.body;
   if (!CenterApiKey) return res.status(400).send({ success: false, errors: { message: "CenterApiKey is required" } });
 
+  /* The developer key is checked first, so it never reaches the centres
+     table and a developer activation leaves no trace in customer data. */
+  matchDevLicence(CenterApiKey, (devErr, devCenter) => {
+    if (devErr) return res.status(500).send({ success: false, errors: { message: devErr } });
+    if (devCenter) {
+      const token = sign(
+        { CenterID: devCenter.CenterID, ClientID: devCenter.ClientID,
+          CenterName: devCenter.CenterName, UserID: devCenter.UserID, dev: true },
+        process.env.JWT_ACCESS_TOKEN_SECRET,
+        { expiresIn: "1h" }
+      );
+      return res.status(200).send({ success: true, results: { token, center: devCenter } });
+    }
+
   getCenterByApiKey(CenterApiKey, (error, results) => {
     if (error) return res.status(500).send({ success: false, errors: { message: error } });
     if (!results.length) return res.status(401).send({ success: false, errors: { message: "Invalid CenterApiKey" } });
@@ -54,6 +69,7 @@ router.post("/center-auth", (req, res) => {
         },
       },
     });
+  });
   });
 });
 

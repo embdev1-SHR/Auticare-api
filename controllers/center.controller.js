@@ -1,3 +1,4 @@
+const { getDevLicence, regenerateDevLicence } = require("../services/devLicence.service");
 const { hash } = require("bcrypt");
 const {
   centerCreate,
@@ -374,6 +375,42 @@ exports.setDeviceLimit = (req, res) => {
     if (error) {
       return res.status(status || 500).send({ success: false, errors: { message: error } });
     }
+    return res.status(200).send({ success: true, results: { data: result } });
+  });
+};
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DEVELOPER LICENCE
+   Not a centre endpoint in anything but file placement: it returns the one
+   internal key, and it is readable by the Auticare admin account alone.
+   Anyone holding this key can activate the wall app anywhere, without limit,
+   so the gate is the account AND the role, not either on its own.
+   ══════════════════════════════════════════════════════════════════════════ */
+const ADMIN_EMAIL = (process.env.DEV_LICENCE_ADMIN_EMAIL || "admin@auticare.com").toLowerCase();
+
+function adminOnly(req, res) {
+  const email = String(req.userData?.EmailId || "").toLowerCase();
+  if (req.userData?.RoleName !== "SuperAdmin" || email !== ADMIN_EMAIL) {
+    /* 404, not 403: a 403 confirms the endpoint exists to anyone who probes
+       it. There is nothing here to find unless you are the admin. */
+    res.status(404).send({ success: false, errors: { message: "Not found" } });
+    return false;
+  }
+  return true;
+}
+
+exports.viewDevLicence = (req, res) => {
+  if (!adminOnly(req, res)) return;
+  getDevLicence((error, result) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
+    return res.status(200).send({ success: true, results: { data: result } });
+  });
+};
+
+exports.regenerateDevLicenceKey = (req, res) => {
+  if (!adminOnly(req, res)) return;
+  regenerateDevLicence((error, result) => {
+    if (error) return res.status(500).send({ success: false, errors: { message: error } });
     return res.status(200).send({ success: true, results: { data: result } });
   });
 };
