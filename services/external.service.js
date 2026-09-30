@@ -4,50 +4,70 @@ const { compare, hash } = require("bcrypt");
 
 // ── Device registration ───────────────────────────────────────────────────────
 
+// A center with MaxDevices = 0 holds a DEVELOPER licence: unlimited devices, and
+// a device already bound to another center is re-bound instead of rejected. Set
+// the limit back to 1 (or any positive number) to revoke it.
+const DEV_LICENCE = 0;
+
 exports.registerDevice = (centerId, deviceId, centerName, callBack) => {
-  // Is this device already known?
-  railwayDb.query(
-    `SELECT center_id FROM device_registrations WHERE device_id = ?`,
-    [deviceId],
-    (e0, existing) => {
-      if (e0) return callBack(e0.message);
+  // Resolve the centre's device allowance first — it decides both the cap and
+  // whether a cross-centre rebind is permitted.
+  mainDb.query(
+    `SELECT COALESCE(MaxDevices, 1) AS MaxDevices FROM centers WHERE CenterID = ?`,
+    [centerId],
+    (eLimit, cRows) => {
+      if (eLimit) return callBack(eLimit.message);
+      const maxDevices = cRows.length ? Number(cRows[0].MaxDevices) : 1;
+      const isDevLicence = maxDevices === DEV_LICENCE;
 
-      if (existing.length) {
-        // Device already registered — must belong to the same center.
-        if (Number(existing[0].center_id) !== Number(centerId)) return callBack("CONFLICT");
-        railwayDb.query(
-          `UPDATE device_registrations SET last_seen_at = NOW() WHERE device_id = ?`,
-          [deviceId],
-          (e1) => (e1 ? callBack(e1.message) : callBack(null, "ok"))
-        );
-        return;
-      }
+      // Is this device already known?
+      railwayDb.query(
+        `SELECT center_id FROM device_registrations WHERE device_id = ?`,
+        [deviceId],
+        (e0, existing) => {
+          if (e0) return callBack(e0.message);
 
-      // New device — enforce the center's device limit (default 1).
-      mainDb.query(
-        `SELECT COALESCE(MaxDevices, 1) AS MaxDevices FROM centers WHERE CenterID = ?`,
-        [centerId],
-        (e2, cRows) => {
-          if (e2) return callBack(e2.message);
-          const maxDevices = cRows.length ? cRows[0].MaxDevices : 1;
+          if (existing.length) {
+            // Device already registered — must belong to the same center,
+            // unless a developer licence is claiming it.
+            const sameCenter = Number(existing[0].center_id) === Number(centerId);
+            if (!sameCenter && !isDevLicence) return callBack("CONFLICT");
+            railwayDb.query(
+              `UPDATE device_registrations
+                  SET center_id = ?,
+                      center_name = COALESCE(NULLIF(?, ''), center_name),
+                      last_seen_at = NOW()
+                WHERE device_id = ?`,
+              [centerId, centerName, deviceId],
+              (e1) => (e1 ? callBack(e1.message) : callBack(null, "ok"))
+            );
+            return;
+          }
+
+          const insertDevice = () =>
+            railwayDb.query(
+              `INSERT INTO device_registrations (device_id, center_id, center_name, last_seen_at)
+               VALUES (?, ?, ?, NOW())`,
+              [deviceId, centerId, centerName],
+              (e4) => {
+                if (e4) {
+                  if (e4.code === "ER_DUP_ENTRY") return callBack("CONFLICT");
+                  return callBack(e4.message);
+                }
+                return callBack(null, "ok");
+              }
+            );
+
+          // New device — a developer licence skips the cap entirely.
+          if (isDevLicence) return insertDevice();
+
           railwayDb.query(
             `SELECT COUNT(*) AS cnt FROM device_registrations WHERE center_id = ?`,
             [centerId],
             (e3, cntRows) => {
               if (e3) return callBack(e3.message);
               if (cntRows[0].cnt >= maxDevices) return callBack("LIMIT");
-              railwayDb.query(
-                `INSERT INTO device_registrations (device_id, center_id, center_name, last_seen_at)
-                 VALUES (?, ?, ?, NOW())`,
-                [deviceId, centerId, centerName],
-                (e4) => {
-                  if (e4) {
-                    if (e4.code === "ER_DUP_ENTRY") return callBack("CONFLICT");
-                    return callBack(e4.message);
-                  }
-                  return callBack(null, "ok");
-                }
-              );
+              return insertDevice();
             }
           );
         }

@@ -660,7 +660,10 @@ exports.regenerateCenterApiKey = (CenterID, callBack) => {
 };
 
 exports.updateCenterDeviceLimit = (CenterID, MaxDevices, callBack) => {
-  const n = Math.max(1, parseInt(MaxDevices, 10) || 1);
+  // 0 is meaningful: it marks a developer licence (unlimited devices). Any other
+  // value clamps to at least 1 so a stray blank cannot lock a centre out.
+  const parsed = parseInt(MaxDevices, 10);
+  const n = parsed === 0 ? 0 : Math.max(1, parsed || 1);
   db.query(
     `UPDATE centers SET MaxDevices = ? WHERE CenterID = ?`,
     [n, CenterID],
