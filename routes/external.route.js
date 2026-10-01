@@ -18,7 +18,12 @@ function verifyCenterToken(req, res, next) {
   const token = header.split(" ")[1];
   verify(token, process.env.JWT_ACCESS_TOKEN_SECRET, (err, payload) => {
     if (err) return res.status(401).send({ success: false, errors: { message: "Invalid or expired token" } });
-    if (!payload.CenterID) return res.status(401).send({ success: false, errors: { message: "Not a center token" } });
+    /* CenterID 0 is the Auticare developer licence, and 0 is falsy - a plain
+       truthiness test rejected its token as "not a center token" and would
+       have failed every authenticated call after activation. */
+    if (payload.CenterID === undefined || payload.CenterID === null) {
+      return res.status(401).send({ success: false, errors: { message: "Not a center token" } });
+    }
     req.centerData = payload; // { CenterID, ClientID, CenterName, UserID }
     next();
   });
@@ -80,7 +85,12 @@ router.post("/center-auth", (req, res) => {
 // ══════════════════════════════════════════════════════════════════════════════
 router.post("/device-register", (req, res) => {
   const { CenterID, deviceId, CenterName } = req.body;
-  if (!CenterID || !deviceId) return res.status(400).send({ success: false, errors: { message: "CenterID and deviceId required" } });
+  /* Same trap: the developer licence registers with CenterID 0, which is
+     falsy, so this guard rejected it as a missing field. "Required" has to
+     mean present, not truthy. */
+  if (CenterID === undefined || CenterID === null || CenterID === "" || !deviceId) {
+    return res.status(400).send({ success: false, errors: { message: "CenterID and deviceId required" } });
+  }
 
   registerDevice(CenterID, deviceId, CenterName || "", (error) => {
     if (error === "CONFLICT") return res.status(409).send({ success: false, errors: { message: "This device is already bound to another center." } });
