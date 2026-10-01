@@ -139,6 +139,13 @@ router.get("/", pageAuthorisation(["SuperAdmin", "ClientAdmin"]), centerList);
  *         "500":
  *           description: Internal server error
  */
+// NOTE: these MUST stay above router.get("/:CenterID"). Express matches in
+// order, so a wildcard declared first treats "dev-licence" as a CenterID and
+// answers with a centre lookup instead - which is silent, not an error.
+// Developer licence - the Auticare admin account only (see the controller).
+router.get("/dev-licence", pageAuthorisation(["SuperAdmin"]), viewDevLicence);
+router.post("/dev-licence/regenerate", pageAuthorisation(["SuperAdmin"]), regenerateDevLicenceKey);
+
 router.get("/:CenterID", pageAuthorisation(["SuperAdmin", "ClientAdmin", "Center"]), centerDetails);
 
 /**
@@ -626,9 +633,6 @@ router.put(
  */
 router.delete("/:CenterID", pageAuthorisation(["SuperAdmin", "ClientAdmin"]), centerDelete);
 
-// Developer licence - the Auticare admin account only (see the controller).
-router.get("/dev-licence", pageAuthorisation(["SuperAdmin"]), viewDevLicence);
-router.post("/dev-licence/regenerate", pageAuthorisation(["SuperAdmin"]), regenerateDevLicenceKey);
 router.post("/generate-api-keys", pageAuthorisation(["SuperAdmin"]), generateApiKeys);
 router.post("/:CenterID/regenerate-api-key", pageAuthorisation(["SuperAdmin"]), regenerateApiKey);
 router.put("/:CenterID/device-limit", pageAuthorisation(["SuperAdmin"]), setDeviceLimit);
